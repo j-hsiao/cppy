@@ -1,0 +1,29 @@
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tst"
+version = "0.0.1"
+
+
+# TOML inline tables MUST BE SINGLE LINE or there will
+# be a parsing error.
+# If want "multiline" tables, then must use
+# array of tables method:
+# [[array destination name]]
+# key/name values...
+# [[array destination name]]
+# key/name values...
+#
+# first instance is converted to the first table
+# second instance is converted to the second table
+# etc...
+#
+[[tool.setuptools.ext-modules]]
+name = "tst.testmodule"
+sources = ["src/tst.cpp"]
+include-dirs = ["include", "/usr/include/eigen3"]

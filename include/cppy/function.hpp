@@ -1,0 +1,4 @@
+#ifndef CPPY_FUNCTION_HPP
+#define CPPY_FUNCTION_HPP
+
+#endif//CPPY_FUNCTION_HPP
