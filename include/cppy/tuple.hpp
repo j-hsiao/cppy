@@ -9,7 +9,7 @@ namespace cppy
 {
 	struct Tuple_{};
 
-	template<bool m>
+	template<bool m=false>
 	using Tuple = Object<Tuple_,m>;
 
 	template<> struct Object<Tuple_, false>: public Object<>
