@@ -11,21 +11,21 @@ namespace cppy
 	//hold arguments
 	template<class...Args> struct Arguments {
 		static constexpr std::size_t size = sizeof...(Args);
-	};
 
-	//Get a type by index
-	template<class cls, std::size_t idx> struct get
-	{
-		template<class T, class...Remain>
-		static Arguments<Remain...> rtp(Arguments<T, Remain...>);
+		//Get a type by index
+		template<std::size_t idx, class cls=Arguments<Args...>> struct get
+		{
+			template<class T, class...Remain>
+			static Arguments<Remain...> rtp(Arguments<T, Remain...>);
 
-		typedef typename get<decltype(rtp(cls{})), idx-1>::type type;
-	};
-	template<class args> struct get<args, 0>
-	{
-		template<class T, class...Remain>
-		static T rtp(Arguments<T, Remain...>);
-		typedef decltype(rtp(args{})) type;
+			typedef typename get<idx-1, decltype(rtp(cls{}))>::type type;
+		};
+		template<class args> struct get<0, args>
+		{
+			template<class T, class...Remain>
+			static T rtp(Arguments<T, Remain...>);
+			typedef decltype(rtp(args{})) type;
+		};
 	};
 
 	//function signature
