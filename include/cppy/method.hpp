@@ -52,6 +52,34 @@ namespace cppy
 		typedef typename function_signature<decltype(&Functor::operator())>::argument_types argument_types;
 	};
 
+	//Wrap function into a functor for uniform interface.
+	template<class T, T *func>
+	struct FunctionWrapper
+	{
+		typedef function_signature<T> signature;
+
+		template<class...Args>
+		void operator()(Args&&...args) const
+		{
+			func(std::forward<Args>(args)...);
+		}
+	};
+
+	template<class T>
+	struct Wrapper
+	{
+		//static PyObject* call(PyObject *self, PyObject *args)
+		//{
+		//	//TODO: For each item in python tuple args, convert and then finally forward
+		//	//into functor
+		//	//
+		//	return nullptr;
+		//}
+	};
+
+
+
+
 	////Provide a static function to wrap a function/functor
 	//template<class Functor, class Converter>
 	//struct functor_wrap
