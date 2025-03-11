@@ -3,6 +3,7 @@
 // { "name", funcptr, flags, "docstr" };
 
 #include <cstddef>
+#include <type_traits>
 //#define PY_SSIZE_T_CLEAN
 //#include <Python.h>
 
@@ -30,6 +31,7 @@ namespace cppy
 
 	//function signature
 	template<class T> struct function_signature;
+
 	//function
 	template<class ret, class...Args>
 	struct function_signature<ret (Args...)>
@@ -37,6 +39,10 @@ namespace cppy
 		typedef ret return_type;
 		typedef Arguments<Args...> arguments_type;
 	};
+
+	template<class ret, class...Args>
+	struct function_signature<ret (*)(Args...)>: function_signature<ret (Args...)> {};
+
 	//member function
 	template<class Functor, class ret, class...Args>
 	struct function_signature<ret (Functor::*)(Args...)>
@@ -53,29 +59,37 @@ namespace cppy
 	};
 
 	//Wrap function into a functor for uniform interface.
-	template<class T, T *func>
-	struct FunctionWrapper
-	{
-		typedef function_signature<T> signature;
+	template<class T> struct Wrapper;
 
-		template<class...Args>
-		void operator()(Args&&...args) const
-		{
-			func(std::forward<Args>(args)...);
-		}
+	template<class T, class B=bool> struct Exist { typedef B type; };
+
+	template<class T> struct DefaultConstructible
+	{
+		private:
+			struct truetype { static constexpr bool value = true; };
+			struct falsetype { static constexpr bool value = false; };
+			static T& inst();
+			template<class V, typename Exist<decltype(V())>::type=true>
+			static truetype check(V&);
+			static falsetype check(...);
+		public:
+			static constexpr bool value =  decltype(check(inst()))::value;
+	};
+
+	template<class T, bool b> struct FunctorWrap;
+
+	template<class T> struct FunctorWrap<T, false>
+	{
+		template<std::size_t Size> struct alignas(T) Buffer { static char buf[sizeof(T)]; };
+		static Buffer<sizeof(T)> buf;
 	};
 
 	template<class T>
-	struct Wrapper
-	{
-		//static PyObject* call(PyObject *self, PyObject *args)
-		//{
-		//	//TODO: For each item in python tuple args, convert and then finally forward
-		//	//into functor
-		//	//
-		//	return nullptr;
-		//}
-	};
+	FunctorWrap<T,false>::Buffer<sizeof(T)> FunctorWrap<T,false>::buf;
+
+
+
+
 
 
 
