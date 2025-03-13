@@ -2,10 +2,16 @@
 // struct PyMethodDef
 // { "name", funcptr, flags, "docstr" };
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include <cstddef>
 #include <type_traits>
-//#define PY_SSIZE_T_CLEAN
-//#include <Python.h>
+#include <utility>
+
+#include <cppy/util.hpp>
+#include <cppy/object.hpp>
+#include <cppy/tuple.hpp>
 
 namespace cppy
 {
@@ -31,6 +37,8 @@ namespace cppy
 
 	//function signature
 	template<class T> struct function_signature;
+	template<class T> struct function_signature<T&>: function_signature<T> {};
+	template<class T> struct function_signature<T&&>: function_signature<T> {};
 
 	//function
 	template<class ret, class...Args>
@@ -45,6 +53,12 @@ namespace cppy
 
 	//member function
 	template<class Functor, class ret, class...Args>
+	struct function_signature<ret (Functor::*)(Args...) const>
+	{
+		typedef ret return_type;
+		typedef Arguments<Args...> arguments_type;
+	};
+	template<class Functor, class ret, class...Args>
 	struct function_signature<ret (Functor::*)(Args...)>
 	{
 		typedef ret return_type;
@@ -55,8 +69,32 @@ namespace cppy
 	struct function_signature
 	{
 		typedef typename function_signature<decltype(&Functor::operator())>::return_type return_type;
-		typedef typename function_signature<decltype(&Functor::operator())>::argument_types argument_types;
+		typedef typename function_signature<decltype(&Functor::operator())>::arguments_type arguments_type;
 	};
+
+	template<
+		class Callable, class...Args,
+		typename enabled<sizeof...(Args) != function_signature<Callable>::arguments_type::size>::type = true
+	>
+	typename function_signature<Callable>::return_type call(
+		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	{
+		return call(
+			std::forward<Callable>(callable), args,
+			std::forward<Args>(converted)...,
+			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)])
+		);
+	}
+
+	template<
+		class Callable, class...Args,
+		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::size>::type = true
+	>
+	typename function_signature<Callable>::return_type call(
+		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	{
+		return callable(std::forward<Args>(converted)...);
+	}
 
 	//Wrap function into a functor for uniform interface.
 	template<class T> struct Wrapper;

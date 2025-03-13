@@ -68,6 +68,7 @@ namespace cppy
 		using Base::Base;
 
 		// Create a new int.
+		Object(int val): Base(success(PyLong_FromLong(val))) {}
 		Object(long val): Base(success(PyLong_FromLong(val))) {}
 		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val))) {}
 		//typedef/alias results in repeated definitions.

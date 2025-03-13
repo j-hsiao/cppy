@@ -1,5 +1,7 @@
 #include <cppy/object.hpp>
 #include <cppy/tuple.hpp>
+#include <cppy/method.hpp>
+
 #include <iostream>
 PyObject* basic_test(PyObject *m, PyObject *args_)
 {
@@ -13,10 +15,22 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	Py_RETURN_NONE;
 }
 
+
+PyObject* call_test(PyObject *m, PyObject *args)
+{
+	int result = cppy::call(
+		[](int a, int b){ return a + b; },
+		args);
+	return cppy::Object<int,true>(result).ret();
+}
+
+
+
 PyMODINIT_FUNC PyInit_testmodule()
 {
 	static PyMethodDef methods[] = {
 		{ "basic_test", basic_test, METH_VARARGS, "print arguments." },
+		{ "call_test", call_test, METH_VARARGS, "add 2 ints." },
 		{}
 	};
 
@@ -27,6 +41,5 @@ PyMODINIT_FUNC PyInit_testmodule()
 		-1,
 		methods
 	};
-	PyObject *m;
 	return PyModule_Create(&mdef);
 }

@@ -27,6 +27,8 @@ namespace cppy
 
 		Object(PyObject *obj) noexcept : obj(obj) {}
 
+		Object(const Object<PyObject*, false> &obj) noexcept : obj(obj.obj) {}
+
 		//Allow access to basic object interface from derived classes.
 		Object<PyObject*, false>& object() { return *this; }
 		const Object<PyObject*, false>& object() const { return *this; }
@@ -118,6 +120,13 @@ namespace cppy
 
 	Object<PyObject*, true> Object<>::operator[](const Object<>&key) const
 	{ return operator[](key.obj); }
+
+	template<class T, bool b> struct Object<T&, b>: Object<T,b>{ using Object<T,b>::Object; };
+	template<class T, bool b> struct Object<T&&, b>: Object<T,b>{ using Object<T,b>::Object; };
+	template<class T, bool b> struct Object<const T, b>: Object<T,b>{ using Object<T,b>::Object; };
+	template<class T, bool b> struct Object<const T&, b>: Object<T,b>{ using Object<T,b>::Object; };
+	template<class T, bool b> struct Object<const T&&, b>: Object<T,b>{ using Object<T,b>::Object; };
+
 }
 
 #include "cppy/string.hpp"
