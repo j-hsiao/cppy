@@ -127,6 +127,16 @@ namespace cppy
 	template<class T, bool b> struct Object<const T&, b>: Object<T,b>{ using Object<T,b>::Object; };
 	template<class T, bool b> struct Object<const T&&, b>: Object<T,b>{ using Object<T,b>::Object; };
 
+	template<class T, bool b> struct Object<Object<T,b>, false>
+	{
+		PyObject *ptr;
+
+		Object(Pybject *ptr): ptr(ptr) {}
+		Object(Object<PyObject*,false> o): ptr(o.obj) {}
+
+		operator Object<T,b>() const { return Object<T,b>(ptr); }
+	};
+
 }
 
 #include "cppy/string.hpp"

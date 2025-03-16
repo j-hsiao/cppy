@@ -3,6 +3,9 @@ namespace cppy
 	template<bool enable, class T=bool> struct enabled {};
 	template<class T> struct enabled<true, T> { typedef T type; };
 
+	template<class T, V> struct same { static constexpr bool value = false; };
+	template<class T> struct same<T,T> { static constexpr bool value = true; };
+
 	template<class T>
 	struct Types
 	{
