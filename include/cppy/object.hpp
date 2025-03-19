@@ -17,6 +17,34 @@ namespace cppy
 		throw PyError();
 	}
 
+	template<class Derived> struct ObjConstruct;
+	template<class T, template<class, bool> class Derived> struct ObjConstruct<Derived<T, false>>
+	{
+		ObjConstruct(){}
+
+		template<class O, template <class, bool> class Othing>
+		Constructors(const Othing<O, false> &obj)
+		{ static_cast<Derived<T,false>*>(this)->obj = obj.obj; }
+	};
+	template<class T, template<class, bool> class Derived> struct ObjConstruct<Derived<T, true>>
+	{
+		ObjConstruct(){}
+
+		template<class O, bool b, template <class, bool> class Othing>
+		Constructors(const Othing<O, b> &obj)
+		{
+			static_cast<Derived<T,false>*>(this)->obj = obj.obj;
+			Py_INCREF(obj.obj);
+		}
+
+		template<class O, template <class, bool> class Othing>
+		Constructors(Othing<O, true> &&obj) noexcept
+		{
+			static_cast<Derived<T,false>*>(this)->obj = obj.obj;
+			obj.obj = nullptr;
+		}
+	};
+
 	template<class T=PyObject*, bool Managed=false> struct Object;
 	//------------------------------
 	//Generic base python object methods.
@@ -24,6 +52,8 @@ namespace cppy
 	template<> struct Object<PyObject*, false>
 	{
 		PyObject *obj;
+
+		Object() noexcept {}
 
 		Object(PyObject *obj) noexcept : obj(obj) {}
 
@@ -74,6 +104,8 @@ namespace cppy
 		using Derived = Object<T>;
 		using Object<T, false>::Object;
 
+		Managed(){}
+
 		//An additional int argument indicates that the input
 		//pointer is a borrowed reference.  It will be
 		//Py_INCREF()ed in this constructor.  Otherwise, the
@@ -102,6 +134,10 @@ namespace cppy
 	template<>
 	struct Object<PyObject*, true>: public Managed<PyObject*>
 	{ using Managed<PyObject*>::Managed; };
+
+	//Constructors taking a single argument of related reference type
+	//are not candidates for inheritance so use unrelated mixin.
+	//Generally, the only member should be the Object<>::obj
 
 	//getattr
 	Object<PyObject*, true> Object<>::get(const char *attr_name) const
