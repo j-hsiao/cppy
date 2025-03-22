@@ -12,10 +12,9 @@
 namespace cppy
 {
 	template<>
-	struct Object<const char*, false>: Object<>, CheckThrow<const char*>
+	struct Object<const char*, false>: Object<>, CheckThrow<const char*>, Constructors<const char*>
 	{
-		using Base = Object<>;
-		using Base::Base;
+		using Constructors<const char*>::Constructors;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
@@ -43,9 +42,9 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<const char*, true>: Managed<const char*>
+	struct Object<const char*, true>: Managed<const char*>, Constructors<const char*, true>
 	{
-		using Base = Managed<const char*>;
+		using Base = Constructors<const char*, true>;
 		using Base::Base;
 
 		//Construct new str

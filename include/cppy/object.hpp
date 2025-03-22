@@ -17,47 +17,52 @@ namespace cppy
 		throw PyError();
 	}
 
-	template<class Derived> struct ObjConstruct;
-	template<class T, template<class, bool> class Derived> struct ObjConstruct<Derived<T, false>>
-	{
-		ObjConstruct(){}
-
-		template<class O, template <class, bool> class Othing>
-		Constructors(const Othing<O, false> &obj)
-		{ static_cast<Derived<T,false>*>(this)->obj = obj.obj; }
-	};
-	template<class T, template<class, bool> class Derived> struct ObjConstruct<Derived<T, true>>
-	{
-		ObjConstruct(){}
-
-		template<class O, bool b, template <class, bool> class Othing>
-		Constructors(const Othing<O, b> &obj)
-		{
-			static_cast<Derived<T,false>*>(this)->obj = obj.obj;
-			Py_INCREF(obj.obj);
-		}
-
-		template<class O, template <class, bool> class Othing>
-		Constructors(Othing<O, true> &&obj) noexcept
-		{
-			static_cast<Derived<T,false>*>(this)->obj = obj.obj;
-			obj.obj = nullptr;
-		}
-	};
-
 	template<class T=PyObject*, bool Managed=false> struct Object;
+
+	//Inheritable constructors from Object<>s.
+	//Otherwise, the constructors are not candidates because takes a
+	//single related reference to base and derived types.
+	template<class T=PyObject*, bool b=false, template<class, bool> class Derived=Object> struct Constructors
+	{
+		Constructors() noexcept {}
+		Constructors(PyObject *obj) noexcept
+		{ static_cast<Derived<T,false>*>(this)->obj = obj; }
+
+		Constructors(const Derived<PyObject*, false> &other) noexcept:
+			Constructors(other.obj)
+		{}
+	};
+	template<class T, template<class, bool> class Derived> struct Constructors<T, true, Derived>
+	{
+		Constructors() noexcept {}
+
+		// PyObject* is already increffed.
+		Constructors(PyObject *obj) noexcept
+		{ static_cast<Derived<T,true>*>(this)->obj = obj; }
+
+		// Also incref the pointer
+		Constructors(PyObject *obj, int) noexcept : Constructors(obj)
+		{ Py_INCREF(obj); }
+
+		//copy regardless of managed or not always increfs
+		template<class O, bool b>
+		Constructors(const Derived<O, b> &other) noexcept : Constructors(other.obj, 0) {}
+
+		//Move from a managed Object
+		template<class O>
+		Constructors(Derived<O, true> &&other) noexcept : Constructors(other.obj)
+		{ other.obj = nullptr; }
+	};
+
+
 	//------------------------------
 	//Generic base python object methods.
 	//------------------------------
-	template<> struct Object<PyObject*, false>
+	template<> struct Object<PyObject*, false>: Constructors<>
 	{
 		PyObject *obj;
 
-		Object() noexcept {}
-
-		Object(PyObject *obj) noexcept : obj(obj) {}
-
-		Object(const Object<PyObject*, false> &obj) noexcept : obj(obj.obj) {}
+		using Constructors::Constructors;
 
 		//Allow access to basic object interface from derived classes.
 		Object<PyObject*, false>& object() { return *this; }
@@ -75,8 +80,8 @@ namespace cppy
 		Object<PyObject*, true> get(const char *attr_name) const;
 		//__getitem__
 		Object<PyObject*, true> operator[](PyObject *key) const;
-
 		Object<PyObject*, true> operator[](const Object<>&key) const;
+		template<class T> Object<PyObject*, true> operator[](T) const;
 
 		//TODO
 		//Object<PyObject*, false> operator()(...)
@@ -101,26 +106,6 @@ namespace cppy
 	template<class T>
 	struct Managed: public Object<T>
 	{
-		using Derived = Object<T>;
-		using Object<T, false>::Object;
-
-		Managed(){}
-
-		//An additional int argument indicates that the input
-		//pointer is a borrowed reference.  It will be
-		//Py_INCREF()ed in this constructor.  Otherwise, the
-		//ptr should be a strong reference whose ownership will
-		//be transferred to the created object.
-		Managed(PyObject *ptr, int) noexcept : Object<T>(ptr) { Py_INCREF(ptr); }
-		//copy constructor, always create a new strong reference.
-		Managed(const Object<PyObject*> &other) noexcept : Managed(other.obj, 0) {}
-
-		//Move constructor from any other managed object.
-		//Transfer ownership of the managed reference.
-		template<class Tp>
-		Managed(Managed<Tp> &&other) noexcept : Managed(other.obj)
-		{ other.obj = nullptr; }
-
 		//Transfer ownership of the wrapped PyObject*
 		PyObject* ret() noexcept
 		{
@@ -132,29 +117,28 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<PyObject*, true>: public Managed<PyObject*>
-	{ using Managed<PyObject*>::Managed; };
+	struct Object<PyObject*, true>: Managed<PyObject*>, Constructors<PyObject*, true>
+	{ using Constructors<PyObject*, true>::Constructors; };
 
 	//Constructors taking a single argument of related reference type
 	//are not candidates for inheritance so use unrelated mixin.
 	//Generally, the only member should be the Object<>::obj
 
 	//getattr
-	Object<PyObject*, true> Object<>::get(const char *attr_name) const
+	inline Object<PyObject*, true> Object<>::get(const char *attr_name) const
 	{
 		PyObject *ret = PyObject_GetAttrString(obj, attr_name);
 		if (!ret) { throw PyError(); }
 		return ret;
 	}
 	//__getitem__
-	Object<PyObject*, true> Object<>::operator[](PyObject *key) const
+	inline Object<PyObject*, true> Object<>::operator[](PyObject *key) const
 	{
 		PyObject *ret = PyObject_GetItem(obj, key);
 		if (!ret) { throw PyError(); }
 		return ret;
 	}
-
-	Object<PyObject*, true> Object<>::operator[](const Object<>&key) const
+	inline Object<PyObject*, true> Object<>::operator[](const Object<>&key) const
 	{ return operator[](key.obj); }
 
 	template<class T, bool b> struct Object<T&, b>: Object<T,b>{ using Object<T,b>::Object; };
@@ -163,14 +147,15 @@ namespace cppy
 	template<class T, bool b> struct Object<const T&, b>: Object<T,b>{ using Object<T,b>::Object; };
 	template<class T, bool b> struct Object<const T&&, b>: Object<T,b>{ using Object<T,b>::Object; };
 
+	//More convenient for argument conversion
 	template<class T, bool b> struct Object<Object<T,b>, false>
 	{
-		PyObject *ptr;
+		Object<> obj;
 
-		Object(Pybject *ptr): ptr(ptr) {}
-		Object(Object<PyObject*,false> o): ptr(o.obj) {}
+		Object(PyObject *ptr): obj(ptr) {}
+		Object(const Object<> &other): obj(other.obj) {}
 
-		operator Object<T,b>() const { return Object<T,b>(ptr); }
+		operator Object<T,b>() const { return Object<T,b>(obj); }
 	};
 
 }

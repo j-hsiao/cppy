@@ -53,23 +53,24 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<int, false>: Object<>, CheckThrow<int>, Convertible<int, IntConvert>
+	struct Object<int, false>: Object<>, CheckThrow<int>, Convertible<int, IntConvert>, Constructors<int>
 	{
-		using Object<>::Object;
+		using Constructors<int>::Constructors;
 		bool check() const { return PyLong_Check(this->obj); }
 		static constexpr const char* name() { return "int"; }
 	};
 
 
 	template<>
-	struct Object<int, true>: Managed<int>
+	struct Object<int, true>: Managed<int>, Constructors<int, true>
 	{
-		using Base = Managed<int>;
+		using Base = Constructors<int, true>;
 		using Base::Base;
 
 		// Create a new int.
 		Object(int val): Base(success(PyLong_FromLong(val))) {}
 		Object(long val): Base(success(PyLong_FromLong(val))) {}
+		Object(unsigned int val): Base(success(PyLong_FromUnsignedLong(val))) {}
 		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val))) {}
 		//typedef/alias results in repeated definitions.
 		//Object(Py_ssize_t val): Base(success(PyLong_FromSSize_t(val))) {}
@@ -83,9 +84,13 @@ namespace cppy
 
 #define MAKE_CPPY_INT_TYPE(tp) \
 	template<bool m> \
-	struct Object<tp, m>: public Object<int, m> \
-	{ using Object<int,m>::Object; }
+	struct Object<tp, m>: public Object<int, m>, Constructors<tp, m> \
+	{ \
+		using Object<int,m>::Object; \
+		using Constructors<tp, m>::Constructors; \
+	}
 
+MAKE_CPPY_INT_TYPE(unsigned int);
 MAKE_CPPY_INT_TYPE(short);
 MAKE_CPPY_INT_TYPE(unsigned short);
 MAKE_CPPY_INT_TYPE(long);
@@ -95,6 +100,22 @@ MAKE_CPPY_INT_TYPE(unsigned long long);
 MAKE_CPPY_INT_TYPE(void*);
 
 #undef MAKE_CPPY_INT_TYPE
+
+#define MAKE_CPPY_OBJ_INT_GETITEM(tp) \
+	template<> \
+	inline Object<PyObject*, true> Object<>::operator[]<tp>(tp i) const \
+	{ return operator[](Object<tp, true>(i).obj); }
+
+	MAKE_CPPY_OBJ_INT_GETITEM(short)
+	MAKE_CPPY_OBJ_INT_GETITEM(unsigned short)
+	MAKE_CPPY_OBJ_INT_GETITEM(long)
+	MAKE_CPPY_OBJ_INT_GETITEM(unsigned long)
+	MAKE_CPPY_OBJ_INT_GETITEM(long long)
+	MAKE_CPPY_OBJ_INT_GETITEM(unsigned long long)
+	MAKE_CPPY_OBJ_INT_GETITEM(int)
+	MAKE_CPPY_OBJ_INT_GETITEM(unsigned int)
+
+#undef  MAKE_CPPY_OBJ_INT_GETITEM
 
 
 
