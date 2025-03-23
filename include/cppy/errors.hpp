@@ -7,12 +7,12 @@
 namespace cppy
 {
 	//Innate python error occurred. After catching, return NULL.
-	struct PyError: public std::runtime_error {
+	struct PyError: std::runtime_error {
 		PyError(): std::runtime_error("") {}
 	};
 
 	//Some error occurred. Need to call PyErr_*
-	struct Error: public std::runtime_error
+	struct Error: std::runtime_error
 	{
 		PyObject *tp;
 		Error(PyObject *tp, const char *msg):
@@ -24,7 +24,7 @@ namespace cppy
 	};
 
 #define MAKE_CPPY_PYTHON_ERROR(name) \
-	struct name: public Error \
+	struct name: Error \
 	{ \
 		name(): Error(PyExc_ ## name, "") {} \
 		name(const char *msg): Error(PyExc_ ## name, msg) {} \

@@ -22,35 +22,35 @@ namespace cppy
 	//Inheritable constructors from Object<>s.
 	//Otherwise, the constructors are not candidates because takes a
 	//single related reference to base and derived types.
-	template<class T=PyObject*, bool b=false, template<class, bool> class Derived=Object> struct Constructors
+	template<class T=PyObject*, bool b=false, template<class, bool> class Derived=Object> struct Make
 	{
-		Constructors() noexcept {}
-		Constructors(PyObject *obj) noexcept
+		Make() noexcept {}
+		Make(PyObject *obj) noexcept
 		{ static_cast<Derived<T,false>*>(this)->obj = obj; }
 
-		Constructors(const Derived<PyObject*, false> &other) noexcept:
-			Constructors(other.obj)
+		Make(const Derived<PyObject*, false> &other) noexcept:
+			Make(other.obj)
 		{}
 	};
-	template<class T, template<class, bool> class Derived> struct Constructors<T, true, Derived>
+	template<class T, template<class, bool> class Derived> struct Make<T, true, Derived>
 	{
-		Constructors() noexcept {}
+		Make() noexcept {}
 
 		// PyObject* is already increffed.
-		Constructors(PyObject *obj) noexcept
+		Make(PyObject *obj) noexcept
 		{ static_cast<Derived<T,true>*>(this)->obj = obj; }
 
 		// Also incref the pointer
-		Constructors(PyObject *obj, int) noexcept : Constructors(obj)
+		Make(PyObject *obj, int) noexcept : Make(obj)
 		{ Py_INCREF(obj); }
 
 		//copy regardless of managed or not always increfs
 		template<class O, bool b>
-		Constructors(const Derived<O, b> &other) noexcept : Constructors(other.obj, 0) {}
+		Make(const Derived<O, b> &other) noexcept : Make(other.obj, 0) {}
 
 		//Move from a managed Object
 		template<class O>
-		Constructors(Derived<O, true> &&other) noexcept : Constructors(other.obj)
+		Make(Derived<O, true> &&other) noexcept : Make(other.obj)
 		{ other.obj = nullptr; }
 	};
 
@@ -58,11 +58,11 @@ namespace cppy
 	//------------------------------
 	//Generic base python object methods.
 	//------------------------------
-	template<> struct Object<PyObject*, false>: Constructors<>
+	template<> struct Object<PyObject*, false>: Make<>
 	{
 		PyObject *obj;
 
-		using Constructors::Constructors;
+		using Make::Make;
 
 		//Allow access to basic object interface from derived classes.
 		Object<PyObject*, false>& object() { return *this; }
@@ -104,7 +104,7 @@ namespace cppy
 	};
 
 	template<class T>
-	struct Managed: public Object<T>
+	struct Managed: Object<T>
 	{
 		//Transfer ownership of the wrapped PyObject*
 		PyObject* ret() noexcept
@@ -117,12 +117,8 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<PyObject*, true>: Managed<PyObject*>, Constructors<PyObject*, true>
-	{ using Constructors<PyObject*, true>::Constructors; };
-
-	//Constructors taking a single argument of related reference type
-	//are not candidates for inheritance so use unrelated mixin.
-	//Generally, the only member should be the Object<>::obj
+	struct Object<PyObject*, true>: Managed<PyObject*>, Make<PyObject*, true>
+	{ using Make<PyObject*, true>::Make; };
 
 	//getattr
 	inline Object<PyObject*, true> Object<>::get(const char *attr_name) const

@@ -53,18 +53,18 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<int, false>: Object<>, CheckThrow<int>, Convertible<int, IntConvert>, Constructors<int>
+	struct Object<int, false>: Object<>, CheckThrow<int>, Convertible<int, IntConvert>, Make<int>
 	{
-		using Constructors<int>::Constructors;
+		using Make<int>::Make;
 		bool check() const { return PyLong_Check(this->obj); }
 		static constexpr const char* name() { return "int"; }
 	};
 
 
 	template<>
-	struct Object<int, true>: Managed<int>, Constructors<int, true>
+	struct Object<int, true>: Managed<int>, Make<int, true>
 	{
-		using Base = Constructors<int, true>;
+		using Base = Make<int, true>;
 		using Base::Base;
 
 		// Create a new int.
@@ -84,10 +84,10 @@ namespace cppy
 
 #define MAKE_CPPY_INT_TYPE(tp) \
 	template<bool m> \
-	struct Object<tp, m>: public Object<int, m>, Constructors<tp, m> \
+	struct Object<tp, m>: Object<int, m>, Make<tp, m> \
 	{ \
 		using Object<int,m>::Object; \
-		using Constructors<tp, m>::Constructors; \
+		using Make<tp, m>::Make; \
 	}
 
 MAKE_CPPY_INT_TYPE(unsigned int);

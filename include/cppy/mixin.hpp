@@ -14,9 +14,6 @@ namespace cppy
 	{
 		using Derived = Object<DerivedRaw>;
 
-		Derived& derived() { return static_cast<Derived&>(*this); }
-		const Derived& derived() const { return static_cast<Derived&>(*this); }
-
 		const Derived& checkthrow() const&
 		{
 			derived().throwifnot(derived().check(), derived().name());
@@ -33,10 +30,17 @@ namespace cppy
 			derived().throwifnot(derived().check(), derived().name());
 			return std::move(derived());
 		}
+		private:
+			Derived& derived() { return static_cast<Derived&>(*this); }
+			const Derived& derived() const { return static_cast<Derived&>(*this); }
 	};
 
 	// Mixin for derived objects that can be converted
 	// to some c type.
+	// Converter: template that takes the target type to convert to.
+	//            It should have toc(PyObject*) to convert to the type
+	//            It should have badc() which returns a bad value to
+	//            check against.
 	template<class DerivedRaw, template<class> class Converter>
 	struct Convertible
 	{

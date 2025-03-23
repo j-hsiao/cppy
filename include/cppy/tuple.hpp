@@ -3,7 +3,7 @@
 
 #include "cppy/object.hpp"
 #include "cppy/int.hpp"
-#include <tuple>
+#include "cppy/mixin.hpp"
 
 namespace cppy
 {
@@ -12,11 +12,11 @@ namespace cppy
 	template<bool m=false>
 	using Tuple = Object<Tuple_,m>;
 
-	template<> struct Object<Tuple_, false>: public Object<>
+	template<> struct Object<Tuple_, false>: Object<>, Make<Tuple_>, CheckThrow<Object<Tuple_>>
 	{
-		using Object<>::Object;
+		using Make<Tuple_>::Make;
 		bool check() const { return PyTuple_Check(obj); }
-		void checkthrow() const { throwifnot(check(), "tuple"); }
+		static constexpr const char* name() { return "tuple"; }
 
 		Py_ssize_t size() const {
 			Py_ssize_t ret = PyTuple_Size(obj);
@@ -57,11 +57,12 @@ namespace cppy
 		{ return TupAssigner{obj, pos}; }
 	};
 
-	template<> struct Object<Tuple_, true>: Managed<Tuple_>
+	template<> struct Object<Tuple_, true>: Managed<Tuple_>, Make<Tuple_, true>
 	{
-		using Managed<Tuple_>::Managed;
+		using Base = Make<Tuple_, true>;
+		using Base::Base;
 
-		Object(Py_ssize_t length): Managed<Tuple_>(success(PyTuple_New(length))) {}
+		Object(Py_ssize_t length): Base(success(PyTuple_New(length))) {}
 	};
 
 }
