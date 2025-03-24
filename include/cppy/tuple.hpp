@@ -4,6 +4,9 @@
 #include "cppy/object.hpp"
 #include "cppy/int.hpp"
 #include "cppy/mixin.hpp"
+#include "cppy/util.hpp"
+
+#include <utility>
 
 namespace cppy
 {
@@ -28,7 +31,7 @@ namespace cppy
 		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
 
 		Object<> operator[](PyObject *pos) const
-		{ return (*this)[static_cast<Py_ssize_t>(Object<int, false>(pos).checkthrow())]; }
+		{ return (*this)[static_cast<Py_ssize_t>(Object<int>(pos).checkthrow())]; }
 
 		struct TupAssigner
 		{
@@ -65,5 +68,29 @@ namespace cppy
 		Object(Py_ssize_t length): Base(success(PyTuple_New(length))) {}
 	};
 
+
+	// Call a C++ callable by converting arguments from a python tuple.
+	template<
+		class Callable, class...Args,
+		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::size)>::type = true
+	>
+	typename function_signature<Callable>::return_type call(
+		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	{
+		return call(
+			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
+			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)]).checkthrow()
+		);
+	}
+
+	template<
+		class Callable, class...Args,
+		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::size>::type = true
+	>
+	typename function_signature<Callable>::return_type call(
+		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	{
+		return callable(std::forward<Args>(converted)...);
+	}
 }
 #endif//CPPY_TUPLE_HPP

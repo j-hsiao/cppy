@@ -1,6 +1,7 @@
 // Wrap functions/functors/lambdas into python-compatible function pointer.
 // struct PyMethodDef
 // { "name", funcptr, flags, "docstr" };
+#ifndef CPPY_METHOD_HPP
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -15,87 +16,6 @@
 
 namespace cppy
 {
-	//hold arguments
-	template<class...Args> struct Arguments {
-		static constexpr std::size_t size = sizeof...(Args);
-
-		//Get a type by index
-		template<std::size_t idx, class cls=Arguments<Args...>> struct get
-		{
-			template<class T, class...Remain>
-			static Arguments<Remain...> rtp(Arguments<T, Remain...>);
-
-			typedef typename get<idx-1, decltype(rtp(cls{}))>::type type;
-		};
-		template<class args> struct get<0, args>
-		{
-			template<class T, class...Remain>
-			static T rtp(Arguments<T, Remain...>);
-			typedef decltype(rtp(args{})) type;
-		};
-	};
-
-	//function signature
-	template<class T> struct function_signature;
-	template<class T> struct function_signature<T&>: function_signature<T> {};
-	template<class T> struct function_signature<T&&>: function_signature<T> {};
-
-	//function
-	template<class ret, class...Args>
-	struct function_signature<ret (Args...)>
-	{
-		typedef ret return_type;
-		typedef Arguments<Args...> arguments_type;
-	};
-
-	template<class ret, class...Args>
-	struct function_signature<ret (*)(Args...)>: function_signature<ret (Args...)> {};
-
-	//member function
-	template<class Functor, class ret, class...Args>
-	struct function_signature<ret (Functor::*)(Args...) const>
-	{
-		typedef ret return_type;
-		typedef Arguments<Args...> arguments_type;
-	};
-	template<class Functor, class ret, class...Args>
-	struct function_signature<ret (Functor::*)(Args...)>
-	{
-		typedef ret return_type;
-		typedef Arguments<Args...> arguments_type;
-	};
-	//functor
-	template<class Functor>
-	struct function_signature
-	{
-		typedef typename function_signature<decltype(&Functor::operator())>::return_type return_type;
-		typedef typename function_signature<decltype(&Functor::operator())>::arguments_type arguments_type;
-	};
-
-	template<
-		class Callable, class...Args,
-		typename enabled<sizeof...(Args) != function_signature<Callable>::arguments_type::size>::type = true
-	>
-	typename function_signature<Callable>::return_type call(
-		Callable &&callable, const Tuple<> &args, Args&&...converted)
-	{
-		return call(
-			std::forward<Callable>(callable), args,
-			std::forward<Args>(converted)...,
-			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)])
-		);
-	}
-
-	template<
-		class Callable, class...Args,
-		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::size>::type = true
-	>
-	typename function_signature<Callable>::return_type call(
-		Callable &&callable, const Tuple<> &args, Args&&...converted)
-	{
-		return callable(std::forward<Args>(converted)...);
-	}
-
 	//Wrap function into a functor for uniform interface.
 	template<class T> struct Wrapper;
 
@@ -196,3 +116,4 @@ namespace cppy
 	//	int callmethod;
 	//};
 }
+#endif//CPPY_METHOD_HPP

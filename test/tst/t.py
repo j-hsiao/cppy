@@ -17,4 +17,4 @@ print('counts match', counts1 == counts2)
 
 
 
-# print('pass' if testmodule.call_test(1, 2) == 3 else 'fail')
+print('pass' if testmodule.call_test(1, 2) == 3 else 'fail')

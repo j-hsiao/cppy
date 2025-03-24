@@ -68,8 +68,13 @@ namespace cppy
 		Object<PyObject*, false>& object() { return *this; }
 		const Object<PyObject*, false>& object() const { return *this; }
 
+		bool check() const { return true; }
+		static constexpr const char* name() { return "object"; }
 		void throwifnot(bool success, const char *msg="") const
 		{ if (not success) { throw TypeError(msg); } }
+		const Object& checkthrow() const& { return *this; }
+		Object& checkthrow() & { return *this; }
+		Object&& checkthrow() && { return *this; }
 
 		// repr
 		Object<const char*, true> repr() const;
