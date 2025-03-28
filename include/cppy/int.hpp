@@ -53,7 +53,7 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<int, false>: Object<>, CheckThrow<int>, Convertible<int, IntConvert>, Make<int>
+	struct Object<int, false>: CheckThrow<int, Object<>>, Convertible<int, IntConvert>, Make<int>
 	{
 		using Make<int>::Make;
 		bool check() const { return PyLong_Check(this->obj); }

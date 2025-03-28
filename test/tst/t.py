@@ -7,14 +7,14 @@ counts1 = [sys.getrefcount(thing) for thing in tup]
 print('arguments:', tup)
 testmodule.basic_test(*tup)
 counts2 = [sys.getrefcount(thing) for thing in tup]
-print('counts match:', counts1 == counts2)
-
-
-testmodule.tuparg_test(*tup)
-counts3 = [sys.getrefcount(thing) for thing in tup]
-print('counts match', counts1 == counts2)
-
+if counts1 != counts2:
+    print('-------------------------')
+    print('ERROR: refcounts do not match.')
+    print('-------------------------')
 
 
 
-print('pass' if testmodule.call_test(1, 2) == 3 else 'fail')
+print('call test:', 'pass' if testmodule.call_test(1, 2) == 3 else 'fail')
+
+print('tup creation:', 'pass' if testmodule.tupassign_test() == (1,'hello world!',1.5,3.25,5) else 'fail')
+print(testmodule.tupassign_test())

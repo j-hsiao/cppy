@@ -9,8 +9,8 @@ namespace cppy
 	//Mix in to add checkthrow methods.
 	//The Derived class should define a bool check() const
 	//method.
-	template<class DerivedRaw>
-	struct CheckThrow
+	template<class DerivedRaw, class Base>
+	struct CheckThrow: Base
 	{
 		using Derived = Object<DerivedRaw>;
 

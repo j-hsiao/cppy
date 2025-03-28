@@ -6,37 +6,43 @@
 
 namespace cppy
 {
-	template<class T> FloatConvert;
+	template<class T> struct FloatConvert;
 	template<> struct FloatConvert<float>
 	{
 		static float toc(PyObject *obj) { return PyFloat_AsDouble(obj); }
 		static constexpr float badc() { return -1.0f; }
 	};
-	template<> struct Conversion<double>
+	template<> struct FloatConvert<double>
 	{
 		static double toc(PyObject *obj) { return PyFloat_AsDouble(obj); }
 		static constexpr double badc() { return -1.0; }
 	};
 
 	template<>
-	struct Object<float>: Object<>, CheckThrow<float>, Convertible<float, FloatConvert>
+	struct Object<float>: CheckThrow<float, Object<>>, Convertible<float, FloatConvert>, Make<float>
 	{
-		using Object<>::Object;
+		using Make<float>::Make;
 		bool check() const { return PyFloat_Check(this->obj); }
 		static constexpr const char* name() { return "float"; }
 	};
 
 	template<>
-	struct Object<float, true>: Managed<PyObject*>
+	struct Object<float, true>: Managed<PyObject*>, Make<float, true>
 	{
-		using Managed::Managed;
+		using Base = Make<float, true>;
+		using Base::Base;
 
-		Float(const char *val): Managed(success(PyFloat_FromString())) {}
-		Float(double val): Managed(success(PyFloat_FromDouble(val))) {}
+		Object(const char *val): Base(success(PyFloat_FromString(Object<const char*, true>(val).obj))) {}
+		Object(float val): Base(success(PyFloat_FromDouble(val))) {}
+		Object(double val): Base(success(PyFloat_FromDouble(val))) {}
 	};
 
 	//In python, double/float are the same
-	template<bool m> struct Object<double, m>: Object<float, m> { using Object<float, m>::Object; };
+	template<bool m> struct Object<double, m>: Object<float, m>, Make<double, m>
+	{
+		using Object<float, m>::Object;
+		using Make<double, m>::Make;
+	};
 
 }
 #endif//CPPY_FLOAT_HPP

@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <utility>
 
 namespace cppy
 {
@@ -74,7 +75,7 @@ namespace cppy
 		{ if (not success) { throw TypeError(msg); } }
 		const Object& checkthrow() const& { return *this; }
 		Object& checkthrow() & { return *this; }
-		Object&& checkthrow() && { return *this; }
+		Object&& checkthrow() && { return std::move(*this); }
 
 		// repr
 		Object<const char*, true> repr() const;

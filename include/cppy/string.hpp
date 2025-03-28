@@ -12,7 +12,7 @@
 namespace cppy
 {
 	template<>
-	struct Object<const char*, false>: Object<>, CheckThrow<const char*>, Make<const char*>
+	struct Object<const char*, false>: CheckThrow<const char*, Object<>>, Make<const char*>
 	{
 		using Make<const char*>::Make;
 
@@ -52,6 +52,16 @@ namespace cppy
 			Base(success(PyUnicode_FromStringAndSize(data, size)))
 		{}
 		Object(const std::string &s): Object(s.c_str(), static_cast<Py_ssize_t>(s.size())) {}
+	};
+
+	//string literal
+	template<std::size_t N>
+	struct Object<const char (&)[N], true>: Object<const char*, true>, Make<const char (&)[N], true>
+	{
+		using Object<const char*, true>::Object;
+		using Make<const char(&)[N], true>::Make;
+
+		Object(const char (&data)[N]): Object<const char*, true>(data, N-1) {}
 	};
 
 	std::ostream& operator<<(std::ostream &o, const Object<const char*, false> &str)
