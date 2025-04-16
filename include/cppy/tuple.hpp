@@ -20,7 +20,7 @@ namespace cppy
 	{
 		using Make<Tuple_>::Make;
 		bool check() const { return PyTuple_Check(obj); }
-		static constexpr const char* name() { return "tuple"; }
+		static constexpr const char* name() { return "Tuple"; }
 
 		Py_ssize_t size() const {
 			Py_ssize_t ret = PyTuple_Size(obj);
