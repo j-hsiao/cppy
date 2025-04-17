@@ -17,6 +17,11 @@ namespace cppy
 		typedef const T const_type;
 		typedef const T &const_ref_type;
 		typedef const T &&const_rref_type;
+
+		static ref_type ref();
+		static rref_type rref();
+		static const_ref_type cref();
+		static const_rref_type crref();
 	};
 	template<class T> struct Types<T&>: Types<T> {};
 	template<class T> struct Types<T&&>: Types<T> {};
@@ -81,5 +86,25 @@ namespace cppy
 	//functor
 	template<class Functor>
 	struct function_signature: function_signature<decltype(&Functor::operator())> {};
+
+	struct True { static constexpr bool value = true; };
+	struct False { static constexpr bool value = false; };
+
+	template<class V, class B=bool> struct Exist { typedef B type;};
+
+	//Default constructible type
+	template<class T>
+	class default_constructible
+	{
+		template<class V, typename Exist<decltype(V())>::type = true>
+		static True check(const V&);
+		static False check(...);
+
+		public:
+		static constexpr bool value = decltype(check(Types<T>::cref()))::value;
+	};
+
+	template<class T> struct alignas(T) AlignedBuffer { static char buf[sizeof(T)] };
+
 }
 #endif//CPPY_UTIL_HPP

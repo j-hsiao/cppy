@@ -16,34 +16,79 @@
 
 namespace cppy
 {
-	//Wrap function into a functor for uniform interface.
-	template<class T> struct Wrapper;
-
-	template<class T, class B=bool> struct Exist { typedef B type; };
-
-	template<class T> struct DefaultConstructible
+	template<class T> class is_object
 	{
-		private:
-			struct truetype { static constexpr bool value = true; };
-			struct falsetype { static constexpr bool value = false; };
-			static T& inst();
-			template<class V, typename Exist<decltype(V())>::type=true>
-			static truetype check(V&);
-			static falsetype check(...);
+		template<class V, bool b>
+		static True check(const Object<V,b>&);
+		static False check(...);
+
 		public:
-			static constexpr bool value =  decltype(check(inst()))::value;
+			static constexpr bool value = decltype(check(Types<T>::cref()))::value;
 	};
 
-	template<class T, bool b> struct FunctorWrap;
-
-	template<class T> struct FunctorWrap<T, false>
+	//Store a copy of the functor as a static member.
+	//Mostly for lambdas
+	template<class T> struct CopyWrapper
 	{
-		template<std::size_t Size> struct alignas(T) Buffer { static char buf[sizeof(T)]; };
-		static Buffer<sizeof(T)> buf;
+		static AlignedBuffer<T> buf;
+
+		typedef function_signature<T> signature;
+		typedef typename signature::return_type return_type;
+
+		static PyObject* call_args(PyObject *mod, PyObject *args)
+		{
+			Tuple<false> tup(args);
+			Object<return_type, true> ret(call(, tup))
+		}
+		static PyObject* call_args(PyObject *mod, PyObject *args)
+		static call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
+		{
+			Py_RETURN_NONE;
+		}
+
+		static PyObject* meth_args(PyObject *mod, PyObject *args)
+		{
+			Py_RETURN_NONE;
+		}
+		static PyObject* meth_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
+		{
+			Py_RETURN_NONE;
+		}
 	};
 
-	template<class T>
-	FunctorWrap<T,false>::Buffer<sizeof(T)> FunctorWrap<T,false>::buf;
+	//Default-constructible functors
+	template<class T> struct Defaultrapper
+	{
+		static PyObject* call_args(PyObject *mod, PyObject *args)
+		{
+			Tuple<false> tup(args);
+		}
+		static PyObject* call_args(PyObject *mod, PyObject *args)
+		static call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
+		{
+			Py_RETURN_NONE;
+		}
+
+		static PyObject* meth_args(PyObject *mod, PyObject *args)
+		{
+			Py_RETURN_NONE;
+		}
+		static PyObject* meth_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
+		{
+			Py_RETURN_NONE;
+		}
+	};
+
+	template<class T, typename enabled<default_constructible<T>::value>::type=true>
+	PyMethodDef wrap(
+		const char *name,
+		const char *doc)
+	{
+
+
+
+		return PyMethodDef{name, func, METH_VARARGS, doc};
+	}
 
 
 

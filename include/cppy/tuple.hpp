@@ -89,7 +89,6 @@ namespace cppy
 		};
 		//Assign values to index
 		TupAssigner operator()(Py_ssize_t pos) { return TupAssigner{*this, pos}; }
-
 	};
 
 	template<> struct Object<Tuple_, true>: Managed<Tuple_>, Make<Tuple_, true>
