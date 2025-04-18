@@ -34,14 +34,16 @@ namespace cppy
 		Object<> operator[](PyObject *pos) const
 		{ return (*this)[static_cast<Py_ssize_t>(Object<int>(pos).checkthrow())]; }
 
-		// tup(idx) = value
-		struct TupAssigner
+		// Represent an item at particular index of a tuple.
+		struct TupleItem
 		{
 			Object<Tuple_, false> &tup;
 			Py_ssize_t idx;
 
+			operator Object<>() { return tup[idx]; }
+
 			//NOTE: this steals a reference
-			TupAssigner& operator=(PyObject *obj)
+			TupleItem& operator=(PyObject *obj)
 			{
 				if (PyTuple_SetItem(tup.obj, idx, obj) == -1) { throw PyError(); }
 				return *this;
@@ -65,27 +67,6 @@ namespace cppy
 				tmp.obj = nullptr;
 				return *this;
 			}
-
-			//template<std::size_t size>
-			//TupAssigner& operator=(const char (&item)[size])
-			//{
-			//	//cannot use .ret() because if fail, then it gets cleared out...
-			//	Object<const char*, true> tmp(item, size-1);
-			//	if (PyTuple_SetItem(tup.obj, idx, tmp.obj)  == -1) { throw PyError(); }
-			//	tmp.obj = nullptr;
-			//	return *this;
-			//}
-
-			//template<class T, std::size_t size>
-			//TupAssigner& operator=(T (&item)[size])
-			//{
-			//	//cannot use .ret() because if fail, then it gets cleared out...
-			//	Object<T*, true> tmp(item, size);
-			//	if (PyTuple_SetItem(tup.obj, idx, tmp.obj)  == -1) { throw PyError(); }
-			//	tmp.obj = nullptr;
-			//	return *this;
-			//}
-
 		};
 		//Assign values to index
 		TupAssigner operator()(Py_ssize_t pos) { return TupAssigner{*this, pos}; }
