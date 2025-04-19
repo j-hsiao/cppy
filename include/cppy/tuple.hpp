@@ -16,9 +16,10 @@ namespace cppy
 	template<bool m=false>
 	using Tuple = Object<Tuple_,m>;
 
-	template<> struct Object<Tuple_, false>: CheckThrow<Tuple_, Object<>>, Make<Tuple_>
+	template<> struct Object<Tuple_, false>: CheckThrow<Tuple_>, Make<Tuple_>, Object<>
 	{
 		using Make<Tuple_>::Make;
+		using CheckThrow<Tuple_>::checkthrow;
 		bool check() const { return PyTuple_Check(obj); }
 		static constexpr const char* name() { return "Tuple"; }
 
@@ -40,7 +41,14 @@ namespace cppy
 			Object<Tuple_, false> &tup;
 			Py_ssize_t idx;
 
-			operator Object<>() { return tup[idx]; }
+			template<class T=PyObject*>
+			Object<T,false> obj() {
+				Object<T, false> ret(success(PyTuple_GetItem(tup.obj, idx)));
+				return ret;
+			}
+
+			template<class T>
+			operator Object<T, false>() { return tup[idx]; }
 
 			//NOTE: this steals a reference
 			TupleItem& operator=(PyObject *obj)
@@ -50,7 +58,7 @@ namespace cppy
 			}
 
 			template<class T>
-			TupAssigner& operator=(Managed<T> &other)
+			TupleItem& operator=(Managed<T> &other)
 			{
 				//cannot use .ret() because if fail, then it gets cleared out...
 				if (PyTuple_SetItem(tup.obj, idx, other.obj) == -1) { throw PyError(); }
@@ -59,7 +67,7 @@ namespace cppy
 			}
 
 			template<class T>
-			TupAssigner& operator=(T &&item)
+			TupleItem& operator=(T &&item)
 			{
 				//cannot use .ret() because if fail, then it gets cleared out...
 				Object<T, true> tmp(item);
@@ -69,7 +77,7 @@ namespace cppy
 			}
 		};
 		//Assign values to index
-		TupAssigner operator()(Py_ssize_t pos) { return TupAssigner{*this, pos}; }
+		TupleItem operator()(Py_ssize_t pos) { return TupleItem{*this, pos}; }
 	};
 
 	template<> struct Object<Tuple_, true>: Managed<Tuple_>, Make<Tuple_, true>

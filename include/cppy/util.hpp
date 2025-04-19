@@ -104,7 +104,7 @@ namespace cppy
 		static constexpr bool value = decltype(check(Types<T>::cref()))::value;
 	};
 
-	template<class T> struct alignas(T) AlignedBuffer { static char buf[sizeof(T)] };
+	template<class T> struct alignas(T) AlignedBuffer { char buf[sizeof(T)]; };
 
 }
 #endif//CPPY_UTIL_HPP

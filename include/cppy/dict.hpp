@@ -15,6 +15,7 @@ namespace cppy
 
 	template<> struct Object<Dict_, false>: CheckThrow<Dict_, Object<>>, Make<Dict_>
 	{
+		using CheckThrow<Dict_>::checkthrow;
 		using Make<Dict_>::Make;
 		bool check() const { return PyDict_Check(obj); }
 		static constexpr const char* name() { return "Dict"; }

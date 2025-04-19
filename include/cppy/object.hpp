@@ -1,81 +1,31 @@
 #ifndef CPPY_PYOBJ_HPP
 #define CPPY_PYOBJ_HPP
 
-#include "cppy/errors.hpp"
-
+#include <cppy/mixin.hpp>
+#
 #include <cstddef>
 #include <limits>
 #include <utility>
 
 namespace cppy
 {
-	//Wrap a call to some python method that returns an object.
-	//If nullptr, implies a python error occurred and throw the
-	//corresponding exception.
-	static inline PyObject* success(PyObject *obj)
-	{
-		if (obj) { return obj; }
-		throw PyError();
-	}
-
 	template<class T=PyObject*, bool Managed=false> struct Object;
-
-	//Inheritable constructors from Object<>s.
-	//Otherwise, the constructors are not candidates because takes a
-	//single related reference to base and derived types.
-	template<class T=PyObject*, bool b=false, template<class, bool> class Derived=Object> struct Make
-	{
-		Make() noexcept {}
-		Make(PyObject *obj) noexcept
-		{ static_cast<Derived<T,false>*>(this)->obj = obj; }
-
-		Make(const Derived<PyObject*, false> &other) noexcept:
-			Make(other.obj)
-		{}
-	};
-	template<class T, template<class, bool> class Derived> struct Make<T, true, Derived>
-	{
-		Make() noexcept {}
-
-		// PyObject* is already increffed.
-		Make(PyObject *obj) noexcept
-		{ static_cast<Derived<T,true>*>(this)->obj = obj; }
-
-		// Also incref the pointer
-		Make(PyObject *obj, int) noexcept : Make(obj)
-		{ Py_INCREF(obj); }
-
-		//copy regardless of managed or not always increfs
-		template<class O, bool b>
-		Make(const Derived<O, b> &other) noexcept : Make(other.obj, 0) {}
-
-		//Move from a managed Object
-		template<class O>
-		Make(Derived<O, true> &&other) noexcept : Make(other.obj)
-		{ other.obj = nullptr; }
-	};
-
 
 	//------------------------------
 	//Generic base python object methods.
 	//------------------------------
-	template<> struct Object<PyObject*, false>: Make<>
+	template<> struct Object<PyObject*, false>: CheckThrow<PyObject*>, Make<PyObject*>
 	{
 		PyObject *obj;
 
 		using Make::Make;
 
-		//Allow access to basic object interface from derived classes.
+		//All subclasses easy access to generic object interface.
 		Object<PyObject*, false>& object() { return *this; }
 		const Object<PyObject*, false>& object() const { return *this; }
 
 		bool check() const { return true; }
-		static constexpr const char* name() { return "object"; }
-		void throwifnot(bool success, const char *msg="") const
-		{ if (not success) { throw TypeError(msg); } }
-		const Object& checkthrow() const& { return *this; }
-		Object& checkthrow() & { return *this; }
-		Object&& checkthrow() && { return std::move(*this); }
+		static constexpr const char* name() { return "Object"; }
 
 		// repr
 		Object<const char*, true> repr() const;
@@ -85,9 +35,30 @@ namespace cppy
 		//getattr
 		Object<PyObject*, true> get(const char *attr_name) const;
 		//__getitem__
-		Object<PyObject*, true> operator[](PyObject *key) const;
-		Object<PyObject*, true> operator[](const Object<>&key) const;
-		template<class T> Object<PyObject*, true> operator[](T) const;
+
+		Object<PyObject*, true> getitem(PyObject *key) const;
+		Object<PyObject*, true> getitem(const Object<>&key) const { getitem(key.obj); }
+		template<class T> Object<PyObject*, true> getitem(T &&key) const
+		{ return getitem(Object<T,true> k(std::forward<T>(key)).obj); }
+
+		template<class Key>
+		struct ItemProxy
+		{
+			Object<> obj;
+			Key key;
+
+			Object<PyObject*, true> object() const { return obj.getitem(key); }
+			operator Object<PyObject*, true>() const { return obj.getitem(key); }
+
+			template<class T>
+			// ItemProxy& operator=(T &&value) { object.setitem(key, std::forward<T>(value)); }
+		}
+
+		ItemProxy<PyObject*> operator[](PyObject *key) const { return {obj, key}; }
+		template<class T, bool b> ItemProxy<Object<T,b>> operator[](const Object<T,b>&key) const
+		{ return {obj, key}; }
+		template<class T> ItemProxy<Object<T,true>> operator[](T &&key) const
+		{ return {obj, Object<T,true>(std::forward<T>(key))}; }
 
 		//TODO
 		//Object<PyObject*, false> operator()(...)
@@ -134,14 +105,14 @@ namespace cppy
 		return ret;
 	}
 	//__getitem__
-	inline Object<PyObject*, true> Object<>::operator[](PyObject *key) const
+	inline Object<PyObject*, true> Object<>::getitem(PyObject *key) const
 	{
 		PyObject *ret = PyObject_GetItem(obj, key);
 		if (!ret) { throw PyError(); }
 		return ret;
 	}
-	inline Object<PyObject*, true> Object<>::operator[](const Object<>&key) const
-	{ return operator[](key.obj); }
+	inline Object<PyObject*, true> Object<>::getitem(const Object<>&key) const
+	{ return getitem(key.obj); }
 
 	template<class T, bool b> struct Object<T&, b>: Object<T,b>{ using Object<T,b>::Object; };
 	template<class T, bool b> struct Object<T&&, b>: Object<T,b>{ using Object<T,b>::Object; };

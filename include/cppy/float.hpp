@@ -19,11 +19,12 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<float>: CheckThrow<float, Object<>>, Convertible<float, FloatConvert>, Make<float>
+	struct Object<float>: CheckThrow<float>, Convertible<float, FloatConvert>, Make<float>, Object<>
 	{
 		using Make<float>::Make;
 		bool check() const { return PyFloat_Check(this->obj); }
 		static constexpr const char* name() { return "float"; }
+		using CheckThrow<float>::checkthrow;
 	};
 
 	template<>

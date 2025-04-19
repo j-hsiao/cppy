@@ -12,9 +12,10 @@
 namespace cppy
 {
 	template<>
-	struct Object<const char*, false>: CheckThrow<const char*, Object<>>, Make<const char*>
+	struct Object<const char*, false>: CheckThrow<const char*>, Make<const char*>, Object<>
 	{
 		using Make<const char*>::Make;
+		using CheckThrow<const char*>::checkthrow;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
