@@ -1,4 +1,5 @@
 #ifndef CPPY_UTIL_HPP
+#define CPPY_UTIL_HPP
 namespace cppy
 {
 	template<bool enable, class T=bool> struct enabled {};

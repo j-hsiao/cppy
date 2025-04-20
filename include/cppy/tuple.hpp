@@ -29,10 +29,10 @@ namespace cppy
 			return ret;
 		}
 		// Tuples return a borrowed reference
-		Object<> operator[](Py_ssize_t pos) const
+		Object<> getitem(Py_ssize_t pos) const
 		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
 
-		Object<> operator[](PyObject *pos) const
+		Object<> getitem(PyObject *pos) const
 		{ return (*this)[static_cast<Py_ssize_t>(Object<int>(pos).checkthrow())]; }
 
 		// Represent an item at particular index of a tuple.

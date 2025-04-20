@@ -101,24 +101,5 @@ MAKE_CPPY_INT_TYPE(unsigned long long);
 MAKE_CPPY_INT_TYPE(void*);
 
 #undef MAKE_CPPY_INT_TYPE
-
-#define MAKE_CPPY_OBJ_INT_GETITEM(tp) \
-	template<> \
-	inline Object<PyObject*, true> Object<>::operator[]<tp>(tp i) const \
-	{ return operator[](Object<tp, true>(i).obj); }
-
-	MAKE_CPPY_OBJ_INT_GETITEM(short)
-	MAKE_CPPY_OBJ_INT_GETITEM(unsigned short)
-	MAKE_CPPY_OBJ_INT_GETITEM(long)
-	MAKE_CPPY_OBJ_INT_GETITEM(unsigned long)
-	MAKE_CPPY_OBJ_INT_GETITEM(long long)
-	MAKE_CPPY_OBJ_INT_GETITEM(unsigned long long)
-	MAKE_CPPY_OBJ_INT_GETITEM(int)
-	MAKE_CPPY_OBJ_INT_GETITEM(unsigned int)
-
-#undef  MAKE_CPPY_OBJ_INT_GETITEM
-
-
-
 }
 #endif//CPPY_INT_HPP

@@ -4,14 +4,19 @@
 #include <cppy/tuple.hpp>
 #include <cppy/float.hpp>
 
+#include <cppy/util.hpp>
 #include <iostream>
+
 PyObject* basic_test(PyObject *m, PyObject *args_)
 {
+	std::cout << "Running basic test as generic object." << std::endl;
 	cppy::Object<> args(args_);
-	std::cout << args.str() << std::endl;
+	std::cout << "  str : " << args.str() << std::endl;
+	std::cout << "  repr: " << args.repr() << std::endl;
+	std::cout << "  size: " << args.size() << std::endl;
 	for (int i=0; i<args.size(); ++i)
 	{
-		std::cout << "  " << i << ": " << args[i].str() << std::endl;
+		std::cout << "    " << i << ": " << args[i]().str() << std::endl;
 	}
 	Py_RETURN_NONE;
 }

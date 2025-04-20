@@ -2,9 +2,23 @@
 #define CPPY_MIXIN_HPP
 
 #include <cppy/errors.hpp>
+
 #include <utility>
 namespace cppy
 {
+	//Wrap a call to some python method that returns an object.
+	//If nullptr, implies a python error occurred and throw the
+	//corresponding exception.
+	static inline PyObject* success(PyObject *obj)
+	{
+		if (obj) { return obj; }
+		throw PyError();
+	}
+
+	void throwifnot(bool success, const char *msg="")
+	{ if (not success) { throw TypeError(msg); } }
+
+
 	template<class T, bool b> struct Object;
 
 //Constructors that take any ancestor class will not be inherited.
@@ -50,18 +64,6 @@ namespace cppy
 		Make(Object<O, true> &&other) noexcept: Make(other.obj)
 		{ other.obj = nullptr; }
 	};
-
-
-	//Wrap a call to some python method that returns an object.
-	//If nullptr, implies a python error occurred and throw the
-	//corresponding exception.
-	static inline PyObject* success(PyObject *obj)
-	{
-		if (obj) { return obj; }
-		throw PyError();
-	}
-	void throwifnot(bool success, const char *msg="")
-	{ if (not success) { throw TypeError(msg); } }
 
 
 	//Mix in to add checkthrow methods.

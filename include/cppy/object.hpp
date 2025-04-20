@@ -2,13 +2,27 @@
 #define CPPY_PYOBJ_HPP
 
 #include <cppy/mixin.hpp>
-#
+
 #include <cstddef>
 #include <limits>
 #include <utility>
 
 namespace cppy
 {
+	//Item proxy for getitem/setitem
+	template<class Container, class Key>
+	struct ItemProxy
+	{
+		Container obj;
+		Key key;
+
+		decltype(obj.getitem(key)) operator()() const { return obj.getitem(key); }
+		operator decltype(obj.getitem(key))() const { return obj.getitem(key); }
+
+		template<class T>
+		ItemProxy& operator=(T &&value) { obj.setitem(key, std::forward<T>(value)); }
+	};
+
 	template<class T=PyObject*, bool Managed=false> struct Object;
 
 	//------------------------------
@@ -27,37 +41,34 @@ namespace cppy
 		bool check() const { return true; }
 		static constexpr const char* name() { return "Object"; }
 
-		// repr
 		Object<const char*, true> repr() const;
-		// str
 		Object<const char*, true> str() const;
 
 		//getattr
 		Object<PyObject*, true> get(const char *attr_name) const;
+
 		//__getitem__
-
 		Object<PyObject*, true> getitem(PyObject *key) const;
-		Object<PyObject*, true> getitem(const Object<>&key) const { getitem(key.obj); }
-		template<class T> Object<PyObject*, true> getitem(T &&key) const
-		{ return getitem(Object<T,true> k(std::forward<T>(key)).obj); }
+		template<class T, bool b>
+		Object<PyObject*, true> getitem(const Object<T,b>&key) const;
+		template<class T> Object<PyObject*, true> getitem(const T &key) const;
 
-		template<class Key>
-		struct ItemProxy
-		{
-			Object<> obj;
-			Key key;
+		//__setitem__
+		void setitem(PyObject *key, PyObject *val)
+		{ if (PyObject_SetItem(obj, key, val) == -1) { throw PyError(); } }
+		void setitem(const Object<> &key, const Object<> &val)
+		{ if (PyObject_SetItem(obj, key.obj, val.obj) == -1) { throw PyError(); } }
 
-			Object<PyObject*, true> object() const { return obj.getitem(key); }
-			operator Object<PyObject*, true>() const { return obj.getitem(key); }
-
-			template<class T>
-			// ItemProxy& operator=(T &&value) { object.setitem(key, std::forward<T>(value)); }
-		}
-
-		ItemProxy<PyObject*> operator[](PyObject *key) const { return {obj, key}; }
-		template<class T, bool b> ItemProxy<Object<T,b>> operator[](const Object<T,b>&key) const
+		ItemProxy<Object<>, PyObject*>
+		operator[](PyObject *key) const { return {obj, key}; }
+		template<class T, bool b>
+		ItemProxy<Object<>, const Object<T,b>> operator[](const Object<T,b>&key) const
 		{ return {obj, key}; }
-		template<class T> ItemProxy<Object<T,true>> operator[](T &&key) const
+		template<class T, bool b>
+		ItemProxy<Object<>, const Object<T,b>> operator[] (Object<T,b> &&key) const
+		{ return {obj, std::move(key)}; }
+		template<class T>
+		ItemProxy<Object<>, Object<T,true>> operator[](T &&key) const
 		{ return {obj, Object<T,true>(std::forward<T>(key))}; }
 
 		//TODO
@@ -111,8 +122,14 @@ namespace cppy
 		if (!ret) { throw PyError(); }
 		return ret;
 	}
-	inline Object<PyObject*, true> Object<>::getitem(const Object<>&key) const
+
+	template<class T, bool b>
+	inline Object<PyObject*, true> Object<>::getitem(const Object<T,b>&key) const
 	{ return getitem(key.obj); }
+
+	template<class T>
+	inline Object<PyObject*, true> Object<>::getitem(const T &key) const
+	{ return getitem(Object<T,true>(key).obj); }
 
 	template<class T, bool b> struct Object<T&, b>: Object<T,b>{ using Object<T,b>::Object; };
 	template<class T, bool b> struct Object<T&&, b>: Object<T,b>{ using Object<T,b>::Object; };
