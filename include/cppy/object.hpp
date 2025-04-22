@@ -16,11 +16,17 @@ namespace cppy
 		Container obj;
 		Key key;
 
+		template<class T, class V>
+		ItemProxy(T &&cont, V &&k): obj(std::forward<T>(cont)), key(std::forward<V>(k)) {}
+
 		decltype(obj.getitem(key)) operator()() const { return obj.getitem(key); }
 		operator decltype(obj.getitem(key))() const { return obj.getitem(key); }
 
 		template<class T>
-		ItemProxy& operator=(T &&value) { obj.setitem(key, std::forward<T>(value)); }
+		ItemProxy& operator=(T &&value) {
+			obj.setitem(key, std::forward<T>(value));
+			return *this;
+		}
 	};
 
 	template<class T=PyObject*, bool Managed=false> struct Object;
@@ -60,16 +66,16 @@ namespace cppy
 		{ if (PyObject_SetItem(obj, key.obj, val.obj) == -1) { throw PyError(); } }
 
 		ItemProxy<Object<>, PyObject*>
-		operator[](PyObject *key) const { return {obj, key}; }
+		operator[](PyObject *key) const { return ItemProxy<Object<>, PyObject*>(obj, key); }
 		template<class T, bool b>
 		ItemProxy<Object<>, const Object<T,b>> operator[](const Object<T,b>&key) const
-		{ return {obj, key}; }
+		{ return ItemProxy<Object<>, const Object<T,b>>(obj, key); }
 		template<class T, bool b>
 		ItemProxy<Object<>, const Object<T,b>> operator[] (Object<T,b> &&key) const
-		{ return {obj, std::move(key)}; }
+		{ return ItemProxy<Object<>, const Object<T,b>>(obj, std::move(key)); }
 		template<class T>
 		ItemProxy<Object<>, Object<T,true>> operator[](T &&key) const
-		{ return {obj, Object<T,true>(std::forward<T>(key))}; }
+		{ return ItemProxy<Object<>, Object<T,true>>(obj, Object<T,true>(std::forward<T>(key))); }
 
 		//TODO
 		//Object<PyObject*, false> operator()(...)

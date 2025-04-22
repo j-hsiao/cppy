@@ -23,12 +23,9 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 
 PyObject* tupassign_test(PyObject *m, PyObject *args_)
 {
-	cppy::Tuple<true> ret(5);
-	ret(0) = 1;
-	ret(1) = "hello world!";
-	ret(2) = 1.5;
-	ret(3) = 3.25f;
-	ret(4) = 5;
+	cppy::Tuple<true> ret(
+		1, "hello world!", 1.5, 3.25f, 5,
+		cppy::Tuple<true>("hello", 42));
 
 	return ret.ret();
 }
@@ -41,14 +38,19 @@ PyObject* call_test(PyObject *m, PyObject *args)
 	return cppy::Object<int,true>(result).ret();
 }
 
-
+PyObject* call_test2(PyObject *m, PyObject *args_)
+{
+	cppy::Tuple<> args(args_);
+	return cppy::callpy(args[0]().obj, 1, 2);
+}
 
 PyMODINIT_FUNC PyInit_testmodule()
 {
 	static PyMethodDef methods[] = {
 		{ "basic_test", basic_test, METH_VARARGS, "print arguments." },
 		{ "tupassign_test", tupassign_test, METH_VARARGS, "return a tup." },
-		{ "call_test", call_test, METH_VARARGS, "add 2 ints." },
+		{ "call_test", call_test, METH_VARARGS, "Call a c++ lambda using python arguments." },
+		{ "call_test2", call_test2, METH_VARARGS, "Call a Python func using c++ arguments (1, 2)." },
 		{}
 	};
 

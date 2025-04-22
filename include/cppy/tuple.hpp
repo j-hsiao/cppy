@@ -28,56 +28,51 @@ namespace cppy
 			if (ret == -1) { throw PyError(); }
 			return ret;
 		}
+
 		// Tuples return a borrowed reference
-		Object<> getitem(Py_ssize_t pos) const
+		template<class T=PyObject*>
+		Object<T> getitem(Py_ssize_t pos) const
 		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
 
-		Object<> getitem(PyObject *pos) const
-		{ return (*this)[static_cast<Py_ssize_t>(Object<int>(pos).checkthrow())]; }
+		//setitem, steals a reference.
+		void setitem(Py_ssize_t pos, PyObject *val)
+		{ if (PyTuple_SetItem(obj, pos, val) == -1) { throw PyError(); } }
+		//steal from a managed object.
+		template<class T>
+		void setitem(Py_ssize_t pos, Object<T,true> &&val)
+		{
+			if (PyTuple_SetItem(obj, pos, val.obj) == -1) { throw PyError(); }
+			else { val.obj = nullptr; }
+		}
+		//incref from any other Object<> instance type.
+		template<class T, bool b>
+		void setitem(Py_ssize_t pos, const Object<T,b> &val)
+		{
+			Py_INCREF(val.obj);
+			if (PyTuple_SetItem(obj, pos, val.obj) == -1) { throw PyError(); }
+		}
+		template<class T, bool b>
+		void setitem(Py_ssize_t pos, Object<T,b> &val)
+		{ setitem(pos, const_cast<const Object<T,b>&>(val)); }
+		//Generic convert into pyobject.
+		template<class T>
+		void setitem(Py_ssize_t pos, T &&t)
+		{ setitem(pos, Object<T,true>(std::forward<T>(t))); }
+
+		template<Py_ssize_t pos=0, class First, class...Items>
+		void setitems(First &&first, Items&&...items)
+		{
+			setitem(pos, Object<First, true>(first));
+			setitems<pos+1>(std::forward<Items>(items)...);
+		}
+		template<Py_ssize_t pos=0> void setitems() {}
 
 		// Represent an item at particular index of a tuple.
-		struct TupleItem
-		{
-			Object<Tuple_, false> &tup;
-			Py_ssize_t idx;
+		typedef ItemProxy<Object<Tuple_, false>, Py_ssize_t> TupleItem;
 
-			template<class T=PyObject*>
-			Object<T,false> obj() {
-				Object<T, false> ret(success(PyTuple_GetItem(tup.obj, idx)));
-				return ret;
-			}
-
-			template<class T>
-			operator Object<T, false>() { return tup[idx]; }
-
-			//NOTE: this steals a reference
-			TupleItem& operator=(PyObject *obj)
-			{
-				if (PyTuple_SetItem(tup.obj, idx, obj) == -1) { throw PyError(); }
-				return *this;
-			}
-
-			template<class T>
-			TupleItem& operator=(Managed<T> &other)
-			{
-				//cannot use .ret() because if fail, then it gets cleared out...
-				if (PyTuple_SetItem(tup.obj, idx, other.obj) == -1) { throw PyError(); }
-				other.obj = nullptr;
-				return *this;
-			}
-
-			template<class T>
-			TupleItem& operator=(T &&item)
-			{
-				//cannot use .ret() because if fail, then it gets cleared out...
-				Object<T, true> tmp(item);
-				if (PyTuple_SetItem(tup.obj, idx, tmp.obj)  == -1) { throw PyError(); }
-				tmp.obj = nullptr;
-				return *this;
-			}
-		};
 		//Assign values to index
-		TupleItem operator()(Py_ssize_t pos) { return TupleItem{*this, pos}; }
+		TupleItem operator[](Py_ssize_t pos) { return TupleItem(*this, pos); }
+		const TupleItem operator[](Py_ssize_t pos) const { return TupleItem(*this, pos); }
 	};
 
 	template<> struct Object<Tuple_, true>: Managed<Tuple_>, Make<Tuple_, true>
@@ -85,16 +80,46 @@ namespace cppy
 		using Base = Make<Tuple_, true>;
 		using Base::Base;
 
-		Object(Py_ssize_t length): Base(success(PyTuple_New(length))) {}
+		template<class...T, Py_ssize_t pos=0>
+		Object(T&&...items):
+			Base(success(PyTuple_New(static_cast<Py_ssize_t>(sizeof...(T)))))
+		{ setnewitems(std::forward<T>(items)...); }
 
-		//template<class...T>
-		//Object(T&&...items):
-		//	Object(sizeof...(T))
-		//{ set(std::forward<T>(items)...); }
+		private:
+			template<Py_ssize_t pos=0, class First, class...Items>
+			void setnewitems(First &&first, Items&&...items)
+			{
+				//It seems PyTuple_SET_ITEM is a macro so it thinks
+				//Object<First, true>... is 2 arguments must separate it out.
+				Object<First, true> tmp(std::forward<First>(first));
+				PyTuple_SET_ITEM(obj, pos, tmp.ret());
+				setnewitems<pos+1>(std::forward<Items>(items)...);
+			}
+			template<Py_ssize_t pos=0, class First, class...Items>
+			void setnewitems(Object<First,true> &&first, Items&&...items)
+			{
+				PyTuple_SET_ITEM(obj, pos, first.ret());
+				setnewitems<pos+1>(std::forward<Items>(items)...);
+			}
+			template<Py_ssize_t pos=0, class First, bool b, class...Items>
+			void setnewitems(const Object<First,b> &first, Items&&...items)
+			{
+				Py_INCREF(first.obj);
+				PyTuple_SET_ITEM(obj, pos, first.obj);
+				setnewitems<pos+1>(std::forward<Items>(items)...);
+			}
+			template<Py_ssize_t pos=0, class First, bool b, class...Items>
+			void setnewitems(Object<First,b> &first, Items&&...items)
+			{
+				setnewitems(
+					const_cast<const Object<First,b>&>(first),
+					std::forward<Items>(items)...);
+			}
+			template<Py_ssize_t pos=0> void setnewitems() {}
 	};
 
 
-	// Call a C++ callable by converting arguments from a python tuple.
+	// Call a C++ functor by converting arguments from a python tuple.
 	template<
 		class Callable, class...Args,
 		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::size)>::type = true
@@ -117,5 +142,15 @@ namespace cppy
 	{
 		return callable(std::forward<Args>(converted)...);
 	}
+
+
+	template<class...Args>
+	PyObject* callpy(PyObject *callable, Args&&...args)
+	{
+		Tuple<true> tupargs(std::forward<Args>(args)...);
+		return success(PyObject_Call(callable, tupargs.obj, NULL));
+	}
+
+
 }
 #endif//CPPY_TUPLE_HPP
