@@ -122,7 +122,7 @@ namespace cppy
 	// Call a C++ functor by converting arguments from a python tuple.
 	template<
 		class Callable, class...Args,
-		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::size)>::type = true
+		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
 	>
 	typename function_signature<Callable>::return_type call(
 		Callable &&callable, const Tuple<> &args, Args&&...converted)
@@ -135,7 +135,7 @@ namespace cppy
 
 	template<
 		class Callable, class...Args,
-		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::size>::type = true
+		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::count>::type = true
 	>
 	typename function_signature<Callable>::return_type call(
 		Callable &&callable, const Tuple<> &args, Args&&...converted)

@@ -6,13 +6,13 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include <cstddef>
-#include <type_traits>
-#include <utility>
-
 #include <cppy/util.hpp>
 #include <cppy/object.hpp>
 #include <cppy/tuple.hpp>
+
+#include <cstddef>
+#include <type_traits>
+#include <utility>
 
 namespace cppy
 {
@@ -35,17 +35,40 @@ namespace cppy
 		typedef function_signature<T> signature;
 		typedef typename signature::return_type return_type;
 
+
+		static PyCFunction get(const T &functor)
+		{
+			buf = functor;
+			if (signature::arguments_type::count == 1)
+			{
+				return call_
+			}
+		}
+
+		//METH_NOARGS
+		static PyObject* call_noargs(PyObject *mod, PyObject *args)
+		{
+			Tuple<false> tup(args);
+			Object<return_type, true> ret(call(, tup))
+			return ret.ret();
+		}
+		//METH_ARGS
 		static PyObject* call_args(PyObject *mod, PyObject *args)
 		{
 			Tuple<false> tup(args);
 			Object<return_type, true> ret(call(, tup))
 		}
-		static PyObject* call_args(PyObject *mod, PyObject *args)
-		static call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
+		//METH_ARGS|METH_KEYWORDS
+		static PyObject* call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
 		{
 			Py_RETURN_NONE;
 		}
 
+		//meth* includes the self when calling
+		static PyObject* meth_noargs(PyObject *mod, PyObject *args)
+		{
+			Py_RETURN_NONE;
+		}
 		static PyObject* meth_args(PyObject *mod, PyObject *args)
 		{
 			Py_RETURN_NONE;
@@ -57,7 +80,7 @@ namespace cppy
 	};
 
 	//Default-constructible functors
-	template<class T> struct Defaultrapper
+	template<class T> struct DefaultWrapper
 	{
 		static PyObject* call_args(PyObject *mod, PyObject *args)
 		{
@@ -79,15 +102,31 @@ namespace cppy
 		}
 	};
 
-	template<class T, typename enabled<default_constructible<T>::value>::type=true>
-	PyMethodDef wrap(
+	//default constructible functor
+	//template<class T, typename enabled<default_constructible<T>::value>::type=true>
+	//PyMethodDef wrap(
+	//	const char *name,
+	//	T &&func,
+	//	const char *doc)
+	//{
+	//	return PyMethodDef{name, func, METH_VARARGS, doc};
+	//}
+
+	//lambda / copy-constructible functor
+	template<class T, typename enabled<!default_constructible<T>::value>::type=true>
+	PyMethodDef methwrap(
 		const char *name,
+		const T &func,
 		const char *doc)
 	{
-
-
-
-		return PyMethodDef{name, func, METH_VARARGS, doc};
+		if (CopyWrapper<T>::signature::arguments_type::count == 1)
+		{
+			return PyMethodDef{name, func, METH_O, doc};
+		}
+		else
+		{
+			return PyMethodDef{name, func, METH_VARARGS, doc};
+		}
 	}
 
 

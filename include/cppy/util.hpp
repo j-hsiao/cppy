@@ -32,7 +32,7 @@ namespace cppy
 
 	//hold arguments
 	template<class...Args> struct Arguments {
-		static constexpr std::size_t size = sizeof...(Args);
+		static constexpr std::size_t count = sizeof...(Args);
 
 		//Get a type by index
 		template<std::size_t idx, class cls=Arguments<Args...>> struct get
@@ -105,7 +105,22 @@ namespace cppy
 		static constexpr bool value = decltype(check(Types<T>::cref()))::value;
 	};
 
-	template<class T> struct alignas(T) AlignedBuffer { char buf[sizeof(T)]; };
+	template<class T> struct alignas(T) AlignedBuffer
+	{
+		char buf[sizeof(T)];
+		T& ref() { return *reinterpret_cast<T*>(buf); }
+
+		AlignedBuffer(){}
+
+		template<class...Args>
+		AlignedBuffer(Args&&...args)
+		{ new(buf) T(std::forward<Args>(args)...); }
+
+		AlignedBuffer& operator=(const T &inst) {
+			new(buf) T(inst);
+			return *this;
+		}
+	};
 
 }
 #endif//CPPY_UTIL_HPP
