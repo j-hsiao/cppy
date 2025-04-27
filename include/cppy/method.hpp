@@ -1,11 +1,16 @@
-// Wrap functions/functors/lambdas into python-compatible function pointer.
+// Wrap c++ callables into a PyMethodDef for calling via python binding.
+// Distinction is made between function (standalone function)
+// and method (the "self"/"module" argument will be passed as well.)
 // struct PyMethodDef
 // { "name", funcptr, flags, "docstr" };
+//
+//
 #ifndef CPPY_METHOD_HPP
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <cppy/errors.hpp>
 #include <cppy/util.hpp>
 #include <cppy/object.hpp>
 #include <cppy/tuple.hpp>
@@ -26,6 +31,21 @@ namespace cppy
 			static constexpr bool value = decltype(check(Types<T>::cref()))::value;
 	};
 
+	//functor: copy constructible or default constructible
+	//If neither... then what? impossible I think...
+	//
+	//                          1 arg: METH_O           N args: METH_VARARGS    kwargs: METH_KEYWORDS
+	//copy constructible        arguments_type::count   >1                      call with keywords list
+	//                            == 1
+	//
+	//
+	//
+	//
+	//default constructible
+	//
+	//
+	//
+
 	//Store a copy of the functor as a static member.
 	//Mostly for lambdas
 	template<class T> struct CopyWrapper
@@ -35,47 +55,48 @@ namespace cppy
 		typedef function_signature<T> signature;
 		typedef typename signature::return_type return_type;
 
-
+		//Get the wrapping PyCFunction pointer.
 		static PyCFunction get(const T &functor)
 		{
 			buf = functor;
-			if (signature::arguments_type::count == 1)
+			if (signature::arguments_type::count == 0)
+			{ return call_noargs; }
+			else if (signature::arguments_type::count == 1)
 			{
-				return call_
+				return call_args
 			}
+			return nullptr;
 		}
 
 		//METH_NOARGS
-		static PyObject* call_noargs(PyObject *mod, PyObject *args)
+		template<class V=T, typename enable<signature::arguments_type::count == 0>::type=true>
+		static PyObject* call(PyObject *self, PyObject *args)
+		{ return Object<return_type, true>(buf.ref()()).ret(); }
+
+		//METH_O
+		template<class V=T, typename enable<signature::arguments_type::count == 1>::type=true>
+		static PyObject* call(PyObject *self, PyObject *args)
 		{
-			Tuple<false> tup(args);
-			Object<return_type, true> ret(call(, tup))
-			return ret.ret();
+			return Object<return_type, true>(buf.ref()(
+				Object<typename signature::arguments_type::get<0>::type, false>(args).checkthrow()
+				)).ret();
 		}
 		//METH_ARGS
-		static PyObject* call_args(PyObject *mod, PyObject *args)
+		template<class V=T, typename enable<(signature::arguments_type::count > 1)>::type=true>
+		static PyObject* call(PyObject *mod, PyObject *args)
 		{
 			Tuple<false> tup(args);
-			Object<return_type, true> ret(call(, tup))
-		}
-		//METH_ARGS|METH_KEYWORDS
-		static PyObject* call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
-		{
-			Py_RETURN_NONE;
-		}
-
-		//meth* includes the self when calling
-		static PyObject* meth_noargs(PyObject *mod, PyObject *args)
-		{
-			Py_RETURN_NONE;
-		}
-		static PyObject* meth_args(PyObject *mod, PyObject *args)
-		{
-			Py_RETURN_NONE;
-		}
-		static PyObject* meth_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
-		{
-			Py_RETURN_NONE;
+			try
+			{
+				return Object<return_type, true> (call(buf.ref(), tup)).ret();
+			}
+			catch(PyError&) { return NULL; }
+			catch(Error &e) { return NULL; }
+			catch(std::exception &e)
+			{
+				Exception("Unknown Error.");
+				return NULL;
+			}
 		}
 	};
 

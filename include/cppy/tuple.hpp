@@ -119,17 +119,32 @@ namespace cppy
 	};
 
 
+	// ------------------------------
 	// Call a C++ functor by converting arguments from a python tuple.
+	// ------------------------------
+	template<
+		int offset=0, class Callable, class...Args,
+		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
+	>
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	{
+		return callcpp(
+			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
+			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)+offset]()).checkthrow()
+		);
+	}
+
 	template<
 		class Callable, class...Args,
 		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
 	>
-	typename function_signature<Callable>::return_type call(
-		Callable &&callable, const Tuple<> &args, Args&&...converted)
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, PyObject *self, const Tuple<> &args)
 	{
-		return call(
-			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
-			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)]).checkthrow()
+		return callcpp<-1>(
+			std::forward<Callable>(callable), args,
+			Object<typename function_signature<Callable>::arguments_type::get<0>::type>(self).checkthrow()
 		);
 	}
 
@@ -137,19 +152,18 @@ namespace cppy
 		class Callable, class...Args,
 		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::count>::type = true
 	>
-	typename function_signature<Callable>::return_type call(
+	typename function_signature<Callable>::return_type callcpp(
 		Callable &&callable, const Tuple<> &args, Args&&...converted)
 	{
 		return callable(std::forward<Args>(converted)...);
 	}
 
-
+	// ------------------------------
+	// call python callable using c++ arguments.
+	// ------------------------------
 	template<class...Args>
 	PyObject* callpy(PyObject *callable, Args&&...args)
-	{
-		Tuple<true> tupargs(std::forward<Args>(args)...);
-		return success(PyObject_Call(callable, tupargs.obj, NULL));
-	}
+	{ return success(PyObject_Call(callable, Tuple<true>(std::forward<Args>(args)...).obj, NULL)); }
 
 
 }

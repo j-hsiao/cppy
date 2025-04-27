@@ -28,8 +28,9 @@ namespace cppy
 	{ \
 		name(): Error(PyExc_ ## name, "") {} \
 		name(const char *msg): Error(PyExc_ ## name, msg) {} \
-	};
+	}
 
+	MAKE_CPPY_PYTHON_ERROR(Exception);
 	MAKE_CPPY_PYTHON_ERROR(TypeError);
 	MAKE_CPPY_PYTHON_ERROR(ValueError);
 	MAKE_CPPY_PYTHON_ERROR(IndexError);

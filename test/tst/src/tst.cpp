@@ -3,6 +3,7 @@
 #include <cppy/object.hpp>
 #include <cppy/tuple.hpp>
 #include <cppy/float.hpp>
+//#include <cppy/method.hpp>
 
 #include <cppy/util.hpp>
 #include <iostream>
@@ -32,7 +33,7 @@ PyObject* tupassign_test(PyObject *m, PyObject *args_)
 
 PyObject* call_test(PyObject *m, PyObject *args)
 {
-	int result = cppy::call(
+	int result = cppy::callcpp(
 		[](int a, int b){ return a + b; },
 		args);
 	return cppy::Object<int,true>(result).ret();
