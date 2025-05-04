@@ -46,6 +46,21 @@ namespace cppy
 	//
 	//
 
+	template<class T, bool DefaultConstructible=default_constructible<T>::value>
+	struct Inst {
+		static T inst() { return T(); }
+		template<class V>
+		static void set_inst(V&&){}
+	};
+	template<class T, false> struct Inst {
+		static AlignedBuffer<T> buf;
+		static T& inst() { return buf.ref(); }
+		template<class V>
+		static void set_inst(V&&v) { buf = v; }
+	};
+	template<class T, false>
+	AlignedBuffer<T> Inst<T,false>::buf;
+
 	//Store a copy of the functor as a static member.
 	//Mostly for lambdas
 	template<class T> struct CopyWrapper
