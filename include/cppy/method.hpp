@@ -21,16 +21,6 @@
 
 namespace cppy
 {
-	template<class T> class is_object
-	{
-		template<class V, bool b>
-		static True check(const Object<V,b>&);
-		static False check(...);
-
-		public:
-			static constexpr bool value = decltype(check(Types<T>::cref()))::value;
-	};
-
 	//functor: copy constructible or default constructible
 	//If neither... then what? impossible I think...
 	//

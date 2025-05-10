@@ -105,6 +105,17 @@ namespace cppy
 		static constexpr bool value = decltype(check(Types<T>::cref()))::value;
 	};
 
+	template<class T, bool b> struct Object;
+	template<class T> class is_object
+	{
+		template<class V, bool b>
+		static True check(const Object<V,b>&);
+		static False check(...);
+
+		public:
+			static constexpr bool value = decltype(check(Types<T>::cref()))::value;
+	};
+
 	template<class T> struct alignas(T) AlignedBuffer
 	{
 		char buf[sizeof(T)];
