@@ -36,26 +36,25 @@ namespace cppy
 	//
 	//
 
+	//Default constructible instance
 	template<class T, bool DefaultConstructible=default_constructible<T>::value>
 	struct Inst {
 		static T inst() { return T(); }
 		template<class V>
 		static void set_inst(V&&){}
 	};
+	//must have copy (like a lambda)
 	template<class T, false> struct Inst {
 		static AlignedBuffer<T> buf;
 		static T& inst() { return buf.ref(); }
 		template<class V>
-		static void set_inst(V&&v) { buf = v; }
+		static void set_inst(V&&v) { buf = std::forward<V>(v); }
 	};
-	template<class T, false>
-	AlignedBuffer<T> Inst<T,false>::buf;
+	template<class T, false> AlignedBuffer<T> Inst<T,false>::buf;
 
-	//Store a copy of the functor as a static member.
-	//Mostly for lambdas
-	template<class T> struct CopyWrapper
+	template<class T> struct Wrapper
 	{
-		static AlignedBuffer<T> buf;
+		static Inst<T> instance;
 
 		typedef function_signature<T> signature;
 		typedef typename signature::return_type return_type;
@@ -63,80 +62,34 @@ namespace cppy
 		//Get the wrapping PyCFunction pointer.
 		static PyCFunction get(const T &functor)
 		{
-			buf = functor;
-			if (signature::arguments_type::count == 0)
-			{ return call_noargs; }
-			else if (signature::arguments_type::count == 1)
-			{
-				return call_args
-			}
-			return nullptr;
+			instance.set_inst(functor);
+			return reinterpret_cast<PyCFunction>(call<T>);
 		}
 
 		//METH_NOARGS
 		template<class V=T, typename enable<signature::arguments_type::count == 0>::type=true>
 		static PyObject* call(PyObject *self, PyObject *args)
-		{ return Object<return_type, true>(buf.ref()()).ret(); }
+		{ return catchcall(buf.ref()); }
 
 		//METH_O
 		template<class V=T, typename enable<signature::arguments_type::count == 1>::type=true>
 		static PyObject* call(PyObject *self, PyObject *args)
 		{
-			return Object<return_type, true>(buf.ref()(
-				Object<typename signature::arguments_type::get<0>::type, false>(args).checkthrow()
-				)).ret();
+			Object<typename signature::arguments_type::get<0>::type, false> arg(args);
+			if (args.check()) { return catchcall(buf.ref(), arg); }
+			else {
+				TypeError("Type mismatch.");
+				return NULL;
+			}
 		}
 		//METH_ARGS
 		template<class V=T, typename enable<(signature::arguments_type::count > 1)>::type=true>
 		static PyObject* call(PyObject *mod, PyObject *args)
 		{
 			Tuple<false> tup(args);
-			try
-			{
-				return Object<return_type, true> (call(buf.ref(), tup)).ret();
-			}
-			catch(PyError&) { return NULL; }
-			catch(Error &e) { return NULL; }
-			catch(std::exception &e)
-			{
-				Exception("Unknown Error.");
-				return NULL;
-			}
+			return catchcall(CPPCaller{}, buf.ref(), tup);
 		}
 	};
-
-	//Default-constructible functors
-	template<class T> struct DefaultWrapper
-	{
-		static PyObject* call_args(PyObject *mod, PyObject *args)
-		{
-			Tuple<false> tup(args);
-		}
-		static PyObject* call_args(PyObject *mod, PyObject *args)
-		static call_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
-		{
-			Py_RETURN_NONE;
-		}
-
-		static PyObject* meth_args(PyObject *mod, PyObject *args)
-		{
-			Py_RETURN_NONE;
-		}
-		static PyObject* meth_kwargs(PyObject *mod, PyObject *args, PyObject *kwargs)
-		{
-			Py_RETURN_NONE;
-		}
-	};
-
-	//default constructible functor
-	//template<class T, typename enabled<default_constructible<T>::value>::type=true>
-	//PyMethodDef wrap(
-	//	const char *name,
-	//	T &&func,
-	//	const char *doc)
-	//{
-	//	return PyMethodDef{name, func, METH_VARARGS, doc};
-	//}
 
 	//lambda / copy-constructible functor
 	template<class T, typename enabled<!default_constructible<T>::value>::type=true>

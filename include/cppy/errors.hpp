@@ -2,40 +2,54 @@
 #define CPPY_ERRORS_HPP
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+
+#include <cppy/util.hpp>
+
 #include <stdexcept>
+#include <utility>
 
 namespace cppy
 {
-	//Innate python error occurred. After catching, return NULL.
-	struct PyError: std::runtime_error {
-		PyError(): std::runtime_error("") {}
+	struct Error: std::runtime_error {
+		template<class...T>
+		Error(T&&...t): std::runtime_error(std::forward<T>(t)...) {}
 	};
+
+	//Innate python error occurred. After catching, return NULL.
+	struct PyError: Error { PyError(): Error("") {} };
 
 	//Some error occurred. Need to call PyErr_*
-	struct Error: std::runtime_error
-	{
-		PyObject *tp;
-		Error(PyObject *tp, const char *msg):
-			std::runtime_error(msg),
-			tp(tp)
-		{
-			PyErr_SetString(tp, msg);
-		}
+	struct CPPError: Error {
+		Error(PyObject *tp, const char *msg): Error(msg) { PyErr_SetString(tp, msg); }
 	};
 
-#define MAKE_CPPY_PYTHON_ERROR(name) \
-	struct name: Error \
-	{ \
-		name(): Error(PyExc_ ## name, "") {} \
-		name(const char *msg): Error(PyExc_ ## name, msg) {} \
-	}
 
+#define MAKE_CPPY_PYTHON_ERROR(name) \
+	struct name: CPPError \
+	{ \
+		name(): CPPError(PyExc_ ## name, "") {} \
+		name(const char *msg): CPPError(PyExc_ ## name, msg) {} \
+	}
 	MAKE_CPPY_PYTHON_ERROR(Exception);
 	MAKE_CPPY_PYTHON_ERROR(TypeError);
 	MAKE_CPPY_PYTHON_ERROR(ValueError);
 	MAKE_CPPY_PYTHON_ERROR(IndexError);
+	MAKE_CPPY_PYTHON_ERROR(KeyError);
 
 #undef MAKE_CPPY_PYTHON_ERROR
+
+	//Call a functor, catching errors.
+	template<class T, class...Args>
+	PyObject* catchcall(T &&functor, Args&&...args) {
+		typedef function_signature<T> signature;
+		try {
+			return Object<typename signature::return_type, true>(
+				std::forward<Args>(args)...).ret();
+		}
+		catch (Error&) {}
+		catch (std::exception&) { CPPError("Unknown Error"); }
+		return NULL;
+	}
 }
 
 #endif//CPPY_ERRORS_HPP

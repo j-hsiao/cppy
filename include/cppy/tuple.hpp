@@ -122,6 +122,7 @@ namespace cppy
 	// ------------------------------
 	// Call a C++ functor by converting arguments from a python tuple.
 	// ------------------------------
+	//TODO: is_callable to call with default arguments.
 	template<
 		int offset=0, class Callable, class...Args,
 		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
@@ -157,6 +158,15 @@ namespace cppy
 	{
 		return callable(std::forward<Args>(converted)...);
 	}
+
+	struct CPPCaller {
+		template<class T, class...Args>
+		auto operator()(T&&t, Args&&...args) const
+			-> decltype(callcpp(std::forward<T>(t), std::forward<Args>(args)...))
+		{
+			return callcpp(std::forward<T>(t), std::forward<Args>(args)...);
+		}
+	};
 
 	// ------------------------------
 	// call python callable using c++ arguments.

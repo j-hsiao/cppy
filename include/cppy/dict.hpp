@@ -41,7 +41,7 @@ namespace cppy
 			PyObject *ret = PyDict_GetItemWithError(obj, key.obj);
 			if (ret) { return Object<>(ret); }
 			if (PyErr_Occurred) { throw PyError(); }
-			else { throw Error("Key was not found."); }
+			else { throw KeyError("Key was not found."); }
 		}
 		template<class T>
 		Object<> operator[](T &&key) const

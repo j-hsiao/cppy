@@ -55,7 +55,7 @@ namespace cppy
 		Buffer(T&&...args): Base(std::forward<T>(args)...)
 		{
 			if (PyObject_GetBuffer(this->obj, &buf, flags) != 0)
-			{ throw Error(); }
+			{ throw TypeError("Not A Buffer."); }
 		}
 
 
