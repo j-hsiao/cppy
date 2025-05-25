@@ -1,9 +1,12 @@
 #ifndef CPPY_UTIL_HPP
 #define CPPY_UTIL_HPP
+#include <type_traits>
+#include <utility>
 namespace cppy
 {
-	template<bool enable, class T=bool> struct enabled {};
-	template<class T> struct enabled<true, T> { typedef T type; };
+	//Add exist argument to enabled
+	template<bool enable, class T=bool, class Exist=void> struct enabled {};
+	template<class T, class Exist> struct enabled<true, T, Exist> { typedef T type; };
 
 	template<class T, class V> struct same { static constexpr bool value = false; };
 	template<class T> struct same<T,T> { static constexpr bool value = true; };
@@ -88,18 +91,20 @@ namespace cppy
 	template<class Functor>
 	struct function_signature: function_signature<decltype(&Functor::operator())> {};
 
-	struct True { static constexpr bool value = true; };
-	struct False { static constexpr bool value = false; };
-
-	template<class V, class B=bool> struct Exist { typedef B type;};
+	//NOTE: function pointers/function types, do NOT store default values
+	//so this would only work with functors.
+	template<class T, class...V>
+	auto is_callable(T&&t, V&&...v)
+		-> typename enabled<true, std::true_type, decltype(t(std::forward<V>(v)...))>::type;
+	std::false_type is_callable(...);
 
 	//Default constructible type
 	template<class T>
 	class default_constructible
 	{
-		template<class V, typename Exist<decltype(V())>::type = true>
-		static True check(const V&);
-		static False check(...);
+		template<class V, typename enabled<true, bool, decltype(V())>::type = true>
+		static std::true_type check(const V&);
+		static std::false_type check(...);
 
 		public:
 		static constexpr bool value = decltype(check(Types<T>::cref()))::value;
@@ -109,8 +114,8 @@ namespace cppy
 	template<class T> class is_object
 	{
 		template<class V, bool b>
-		static True check(const Object<V,b>&);
-		static False check(...);
+		static std::true_type check(const Object<V,b>&);
+		static std::false_type check(...);
 
 		public:
 			static constexpr bool value = decltype(check(Types<T>::cref()))::value;
