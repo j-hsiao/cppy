@@ -20,9 +20,8 @@ namespace cppy
 
 	//Some error occurred. Need to call PyErr_*
 	struct CPPError: Error {
-		Error(PyObject *tp, const char *msg): Error(msg) { PyErr_SetString(tp, msg); }
+		CPPError(PyObject *tp, const char *msg): Error(msg) { PyErr_SetString(tp, msg); }
 	};
-
 
 #define MAKE_CPPY_PYTHON_ERROR(name) \
 	struct name: CPPError \
@@ -38,18 +37,28 @@ namespace cppy
 
 #undef MAKE_CPPY_PYTHON_ERROR
 
-	//Call a functor, catching errors.
-	template<class T, class...Args>
-	PyObject* catchcall(T &&functor, Args&&...args) {
-		typedef function_signature<T> signature;
-		try {
-			return Object<typename signature::return_type, true>(
-				std::forward<Args>(args)...).ret();
-		}
-		catch (Error&) {}
-		catch (std::exception&) { CPPError("Unknown Error"); }
-		return NULL;
+	static inline PyObject* success(PyObject *obj) {
+		if (obj) { return obj; }
+		throw PyError();
 	}
+
+	void throwifnot(bool success, const char *msg="")
+	{ if (not success) { throw TypeError(msg); } }
+
+
+
+//	//Call a functor, catching errors.
+//	template<class T, class...Args>
+//	PyObject* catchcall(T &&functor, Args&&...args) {
+//		typedef function_signature<T> signature;
+//		try {
+//			return Object<typename signature::return_type, true>(
+//				std::forward<Args>(args)...).ret();
+//		}
+//		catch (Error&) {}
+//		catch (std::exception&) { CPPError("Unknown Error"); }
+//		return NULL;
+//	}
 }
 
 #endif//CPPY_ERRORS_HPP

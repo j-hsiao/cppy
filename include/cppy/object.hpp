@@ -1,7 +1,8 @@
 #ifndef CPPY_PYOBJ_HPP
 #define CPPY_PYOBJ_HPP
 
-#include <cppy/mixin.hpp>
+//#include <cppy/mixin.hpp>
+#include <cppy/errors.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -30,39 +31,76 @@ namespace cppy
 	};
 
 	//------------------------------
-	//Generic base python object methods.
+	//Generic base python object and methods.
 	//------------------------------
+	template<
+
+	template<class T=const PyObject&> struct Object;
+	//Immutable borrowed reference.
 	template<> struct Object<const PyObject&> {
 		PyObject *obj;
 
-		Object(): obj(nullptr) noexcept {}
-		Object(PyObject *obj): obj(obj) noexcept {}
-		Object(const PyObject &obj): obj(const_cast<PyObject*>(&obj)) noexcept {}
+		Object() noexcept: obj(nullptr) {}
+		Object(PyObject *obj) noexcept: obj(obj) {}
+		Object(const PyObject &obj) noexcept: obj(const_cast<PyObject*>(&obj)) {}
 
 		operator const PyObject& () { return *obj; }
 
-		PyObject* ret() { return obj; }
+		PyObject* ret() const { return obj; }
 		bool check() const { return true; }
 		static constexpr const char* name() { return "Object"; }
 		Object<const char*> repr() const;
 		Object<const char*> str() const;
-		Object<PyObject&> attr(const char *attr_name) const;
 
-		Object<PyObject&> getitem(PyObject*) const;
-		Object<PyObject&> getitem(const PyObject &key) const;
+		Object<PyObject> attr(const char *attr_name) const;
+		Object<PyObject> getitem(PyObject*) const;
+		Object<PyObject> getitem(const PyObject &key) const;
+		Object<PyObject> operator[](PyObject *key) const;
+		Object<PyObject> operator[](const PyObject &key) const;
+
+		const Object& object() const { return *this; }
+
+		Py_ssize_t size() const {
+			auto ret = PyObject_Size(obj);
+			if (ret < 0) { throw PyError(); }
+			return ret;
+		}
+		operator bool() const
+		{
+			int result = PyObject_IsTrue(obj);
+			if (result < 0) { throw PyError(); }
+			return result == 1;
+		}
 	};
 
-	template<> struct Object<PyObject&>: public Object<const PyObject&> {
+	//Mutable borrowed reference.
+	template<> struct Object<PyObject&>: Object<const PyObject&> {
 		using Object<const PyObject&>::Object;
 		Object(const PyObject&) = delete;
 		Object(PyObject &obj): Object<const PyObject&>(&obj) {}
 
+		void setitem(PyObject *key, PyObject *val)
+		{ if (PyObject_SetItem(obj, key, val) == -1) { throw PyError(); } }
+		void setitem(const PyObject &key, PyObject *val) { setitem(const_cast<PyObject*>(&key), val); }
+		void setitem(PyObject *key, const PyObject &val) { setitem(key, const_cast<PyObject*>(&val)); }
+		void setitem(const PyObject &key, const PyObject &val) { setitem(key, const_cast<PyObject*>(&val)); }
+
+		ItemProxy<Object<PyObject&>, PyObject*> operator[](PyObject *key)
+		{ return ItemProxy<Object<PyObject&>, PyObject*>(*this, key); }
+		ItemProxy<Object<PyObject&>, PyObject*> operator[](const PyObject &key)
+		{ return ItemProxy<Object<PyObject&>, PyObject*>(*this, const_cast<PyObject*>(&key)); }
+
 		operator PyObject&() { return *this->obj; }
+		Object& object() { return *this; }
 	};
 
+	//Owned object.
 	template<> struct Object<PyObject>: Object<PyObject&> {
+		Object(PyObject *obj, bool preincr): Object<PyObject&>(obj) {
+			if (!preincr) { Py_INCREF(obj); }
+		}
 		Object(PyObject *obj): Object<PyObject&>(obj) { Py_INCREF(obj); }
-		Object(const PyObject &obj): Object<PyObject&>(obj) { Py_INCREF(&obj); }
+		Object(const PyObject &obj): Object<PyObject&>(const_cast<PyObject*>(&obj)) { Py_INCREF(&obj); }
 
 		PyObject* ret() {
 			PyObject *ret = this->obj;
@@ -70,6 +108,9 @@ namespace cppy
 			return ret;
 		}
 		~Object() { Py_XDECREF(this->obj); }
+
+		operator const PyObject&() const& { return *this->obj; }
+		operator PyObject&() & { return *this->obj; }
 	};
 
 
@@ -77,65 +118,6 @@ namespace cppy
 
 //	template<> struct Object<PyObject*, false>: CheckThrow<PyObject*>, Make<PyObject*>
 //	{
-//		PyObject *obj;
-
-//		using Make::Make;
-
-//		//All subclasses easy access to generic object interface.
-//		Object<PyObject*, false>& object() { return *this; }
-//		const Object<PyObject*, false>& object() const { return *this; }
-
-//		bool check() const { return true; }
-//		static constexpr const char* name() { return "Object"; }
-
-//		Object<const char*, true> repr() const;
-//		Object<const char*, true> str() const;
-
-//		//getattr
-//		Object<PyObject*, true> get(const char *attr_name) const;
-
-//		//__getitem__
-//		Object<PyObject*, true> getitem(PyObject *key) const;
-//		template<class T, bool b>
-//		Object<PyObject*, true> getitem(const Object<T,b>&key) const;
-//		template<class T> Object<PyObject*, true> getitem(const T &key) const;
-
-//		//__setitem__
-//		void setitem(PyObject *key, PyObject *val)
-//		{ if (PyObject_SetItem(obj, key, val) == -1) { throw PyError(); } }
-//		void setitem(const Object<> &key, const Object<> &val)
-//		{ if (PyObject_SetItem(obj, key.obj, val.obj) == -1) { throw PyError(); } }
-
-//		ItemProxy<Object<>, PyObject*>
-//		operator[](PyObject *key) const { return ItemProxy<Object<>, PyObject*>(obj, key); }
-//		template<class T, bool b>
-//		ItemProxy<Object<>, const Object<T,b>> operator[](const Object<T,b>&key) const
-//		{ return ItemProxy<Object<>, const Object<T,b>>(obj, key); }
-//		template<class T, bool b>
-//		ItemProxy<Object<>, const Object<T,b>> operator[] (Object<T,b> &&key) const
-//		{ return ItemProxy<Object<>, const Object<T,b>>(obj, std::move(key)); }
-//		template<class T>
-//		ItemProxy<Object<>, Object<T,true>> operator[](T &&key) const
-//		{ return ItemProxy<Object<>, Object<T,true>>(obj, Object<T,true>(std::forward<T>(key))); }
-
-//		//TODO
-//		//Object<PyObject*, false> operator()(...)
-//		//how to wrap, convert to tuple, call function...?
-
-//		//len
-//		Py_ssize_t size() const
-//		{
-//			auto ret = PyObject_Size(obj);
-//			if (ret < 0) { throw PyError(); }
-//			return ret;
-//		}
-//		//bool()
-//		operator bool() const
-//		{
-//			int result = PyObject_IsTrue(obj);
-//			if (result < 0) { throw PyError(); }
-//			return result == 1;
-//		}
 //	};
 
 //	template<class T>
@@ -197,21 +179,21 @@ namespace cppy
 
 }
 
-//#include "cppy/string.hpp"
-//namespace cppy
-//{
-//	Object<const char*, true> Object<>::repr() const
-//	{
-//		PyObject *ret = PyObject_Repr(obj);
-//		if (!ret) { throw PyError(); }
-//		return ret;
-//	}
+#include "cppy/string.hpp"
+namespace cppy
+{
+	Object<const char*> Object<>::repr() const
+	{
+		PyObject *ret = PyObject_Repr(obj);
+		if (!ret) { throw PyError(); }
+		return ret;
+	}
 
-//	Object<const char*, true> Object<>::str() const
-//	{
-//		PyObject *ret = PyObject_Str(obj);
-//		if (!ret) { throw PyError(); }
-//		return ret;
-//	}
-//}
+	Object<const char*> Object<>::str() const
+	{
+		PyObject *ret = PyObject_Str(obj);
+		if (!ret) { throw PyError(); }
+		return ret;
+	}
+}
 #endif//CPPY_PYOBJ_HPP
