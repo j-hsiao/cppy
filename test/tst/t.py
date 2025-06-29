@@ -12,11 +12,15 @@ if counts1 != counts2:
     print('-------------------------')
     print('ERROR: arg refcounts do not match.')
     print('-------------------------')
+    print(counts1)
+    print(counts2)
 tupcount2 = sys.getrefcount(tup)
 if tupcount1 != tupcount2:
     print('-------------------------')
     print('ERROR: argtup refcounts do not match.')
     print('-------------------------')
+    print(tupcount1)
+    print(tupcount2)
 
 
 

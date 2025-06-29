@@ -12,8 +12,7 @@
 
 namespace cppy
 {
-	template<>
-	struct Object<const char*&>: Object<PyObject&>
+	template<> struct Object<const char*&>: Object<PyObject&>
 	{
 		using Object<PyObject&>::Object;
 
@@ -47,13 +46,12 @@ namespace cppy
 		}
 	};
 
-	template<>
-	struct Object<const char*>: Object<PyObject, const char*>
+	template<> struct Object<const char*>: Object<PyObject, const char*>
 	{
 		using Object<PyObject, const char*>::Object;
 
 		Object(const char *data, Py_ssize_t size):
-			Object<PyObject, const char*>(success(PyUnicode_FromStringAndSize(data, size)))
+			Object<PyObject, const char*>(success(PyUnicode_FromStringAndSize(data, size)), true)
 		{}
 		template<std::size_t N> Object(const char (&data)[N]): Object(data, N-1) {}
 		Object(const char *data): Object(data, std::strlen(data)) {}

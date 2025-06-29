@@ -68,18 +68,18 @@ namespace cppy
 		using Base::Base;
 
 		// Create a new int.
-		Object(int val): Base(success(PyLong_FromLong(val)), false) {}
-		Object(long val): Base(success(PyLong_FromLong(val)), false) {}
-		Object(unsigned int val): Base(success(PyLong_FromUnsignedLong(val)), false) {}
-		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val)), false) {}
+		Object(int val): Base(success(PyLong_FromLong(val)), true) {}
+		Object(long val): Base(success(PyLong_FromLong(val)), true) {}
+		Object(unsigned int val): Base(success(PyLong_FromUnsignedLong(val)), true) {}
+		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val)), true) {}
 		//typedef/alias results in repeated definitions.
-		//Object(Py_ssize_t val): Base(success(PyLong_FromSSize_t(val)), false) {}
-		//Object(std::size_t val): Base(success(PyLong_FromSize_t(val)), false) {}
-		Object(long long val): Base(success(PyLong_FromLongLong(val)), false) {}
-		Object(unsigned long long val): Base(success(PyLong_FromUnsignedLongLong(val)), false) {}
-		Object(double val): Base(success(PyLong_FromDouble(val)), false) {}
-		Object(const char *str, int base=0): Base(success(PyLong_FromString(str, NULL, base)), false) {}
-		Object(void *ptr): Base(success(PyLong_FromVoidPtr(ptr)), false) {}
+		//Object(Py_ssize_t val): Base(success(PyLong_FromSSize_t(val)), true) {}
+		//Object(std::size_t val): Base(success(PyLong_FromSize_t(val)), true) {}
+		Object(long long val): Base(success(PyLong_FromLongLong(val)), true) {}
+		Object(unsigned long long val): Base(success(PyLong_FromUnsignedLongLong(val)), true) {}
+		Object(double val): Base(success(PyLong_FromDouble(val)), true) {}
+		Object(const char *str, int base=0): Base(success(PyLong_FromString(str, NULL, base)), true) {}
+		Object(void *ptr): Base(success(PyLong_FromVoidPtr(ptr)), true) {}
 	};
 
 #define MAKE_CPPY_INT_TYPE(tp) \
