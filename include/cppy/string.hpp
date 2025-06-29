@@ -13,9 +13,9 @@
 namespace cppy
 {
 	template<>
-	struct Object<const char*&>: Object<const PyObject&>
+	struct Object<const char*&>: Object<PyObject&>
 	{
-		using Object<const PyObject&>::Object;
+		using Object<PyObject&>::Object;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
@@ -48,43 +48,28 @@ namespace cppy
 	};
 
 	template<>
-	struct Object<const char*>: Object<const char*&>
+	struct Object<const char*>: Object<PyObject, const char*>
 	{
+		using Object<PyObject, const char*>::Object;
+
 		Object(const char *data, Py_ssize_t size):
-			Object<const char*&>(success(PyUnicode_FromStringAndSize(data, size)))
+			Object<PyObject, const char*>(success(PyUnicode_FromStringAndSize(data, size)))
 		{}
+		template<std::size_t N> Object(const char (&data)[N]): Object(data, N-1) {}
 		Object(const char *data): Object(data, std::strlen(data)) {}
-		Object(const std::string &s):
-			Object(s.c_str(), static_cast<Py_ssize_t>(s.size())) {}
+		Object(const std::string &s): Object(s.c_str(), static_cast<Py_ssize_t>(s.size())) {}
 	};
 
-	//template<>
-	//struct Object<const char*, true>: Managed<const char*>, Make<const char*, true>
-	//{
-	//	using Base = Make<const char*, true>;
-	//	using Base::Base;
+	//string literal
+	template<std::size_t N>
+	struct Object<const char (&)[N]>: Object<const char*>
+	{ using Object<const char*>::Object; };
 
-	//	//Construct new str
-	//	Object(const char *data, Py_ssize_t size):
-	//		Base(success(PyUnicode_FromStringAndSize(data, size)))
-	//	{}
-	//};
-
-	////string literal
-	//template<std::size_t N>
-	//struct Object<const char (&)[N], true>: Object<const char*, true>, Make<const char (&)[N], true>
-	//{
-	//	using Object<const char*, true>::Object;
-	//	using Make<const char(&)[N], true>::Make;
-
-	//	Object(const char (&data)[N]): Object<const char*, true>(data, N-1) {}
-	//};
-
-	//std::ostream& operator<<(std::ostream &o, const Object<const char*, false> &str)
-	//{
-	//	auto tmp = str.utf8();
-	//	o.write(tmp.data, tmp.size);
-	//	return o;
-	//}
+	std::ostream& operator<<(std::ostream &o, const Object<const char*> &str)
+	{
+		auto tmp = str.utf8();
+		o.write(tmp.data, tmp.size);
+		return o;
+	}
 }
 #endif//CPPY_STRING_HPP

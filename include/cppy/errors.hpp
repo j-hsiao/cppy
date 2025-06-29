@@ -45,8 +45,6 @@ namespace cppy
 	void throwifnot(bool success, const char *msg="")
 	{ if (not success) { throw TypeError(msg); } }
 
-
-
 //	//Call a functor, catching errors.
 //	template<class T, class...Args>
 //	PyObject* catchcall(T &&functor, Args&&...args) {

@@ -6,50 +6,7 @@
 #include <utility>
 namespace cppy
 {
-//Constructors that take any ancestor class will not be inherited.
-//To get constructors from Object<>, must either
-//1: define them explicitly
-//2: Inherit from another class that does not inherit from Object<>
-//   and add using *::*
-//
-//using a macro to define the constructors is probably easier...
-#define CPPY_BORROWED_OBJECT_CONSTRUCTORS \
-	Object() noexcept {} \
-	Object(PyObject *obj) noexcept { this->obj = obj; } \
-	Object(const Object<PyObject*, false> &other) noexcept { obj = other.obj; }
-
-#define CPPY_OWNED_OBJECT_CONSTRUCTORS \
-	Object() noexcept {} \
-	Object(PyObject *obj) noexcept { this->obj = obj; } \
-	Object(const Object<PyObject*, false> &other) noexcept: Object(other.obj, 1) {} \
-	Object(PyObject *obj, int) noexcept: Object(obj) { Py_INCREF(obj); } \
-	template<class O> \
-	Object(Object<O, true> &&other) noexcept: Object(other.obj) \
-	{ other.obj = nullptr; }
-
-	template<class T, bool owned=false, template<class, bool> class Object=Object>
-	struct Make
-	{
-		Make() noexcept {}
-		Make(PyObject *obj) noexcept {
-			static_cast<Object<T,false>*>(this)->obj = obj;
-		}
-		Make(const Object<PyObject*, false> &other) noexcept: Make(other.obj) {}
-	};
-
-	template<class T, template<class, bool> class Object> struct Make<T, true, Object>
-	{
-		Make() noexcept {}
-		Make(PyObject *obj) noexcept {
-			static_cast<Object<T,true>*>(this)->obj = obj;
-		}
-		Make(const Object<PyObject*, false> &other) noexcept: Make(other.obj, 1) {}
-		Make(PyObject *obj, int) noexcept: Make(obj) { Py_INCREF(obj); }
-		template<class O>
-		Make(Object<O, true> &&other) noexcept: Make(other.obj)
-		{ other.obj = nullptr; }
-	};
-
+	template<class T, class Actual> struct Object;
 
 	//Mix in to add checkthrow methods.
 	//The Derived class should define a bool check() const
@@ -57,7 +14,7 @@ namespace cppy
 	template<class T>
 	struct CheckThrow
 	{
-		using Derived = Object<T, false>;
+		using Derived = Object<T>;
 
 		const Derived& checkthrow() const&
 		{
@@ -92,7 +49,7 @@ namespace cppy
 	template<class T, template<class> class Converter>
 	struct Convertible
 	{
-		using Derived = Object<T, false>;
+		using Derived = Object<T>;
 
 		template<class O>
 		O to() const {

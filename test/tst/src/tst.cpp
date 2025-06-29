@@ -1,5 +1,5 @@
 //#include <cppy/tuple.hpp>
-//#include <cppy/int.hpp>
+#include <cppy/int.hpp>
 #include <cppy/object.hpp>
 //#include <cppy/tuple.hpp>
 //#include <cppy/float.hpp>
@@ -15,10 +15,17 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	std::cout << "  size: " << args.size() << std::endl;
 	std::cout << "  str : " << args.str() << std::endl;
 	std::cout << "  repr: " << args.repr() << std::endl;
-	//for (int i=0; i<args.size(); ++i)
-	//{
-	//	std::cout << "    " << i << ": " << args[i]().str() << std::endl;
-	//}
+
+	for (int i=0; i<args.size(); ++i)
+	{
+		std::cout << "    " << i << ": " << const_cast<const decltype(args)&>(args)[i].str() << std::endl;
+	}
+
+	cppy::Object<PyObject> owned(args_);
+	std::cout << "  size: " << owned.size() << std::endl;
+	std::cout << "  str : " << owned.str() << std::endl;
+	std::cout << "  repr: " << owned.repr() << std::endl;
+
 	Py_RETURN_NONE;
 }
 

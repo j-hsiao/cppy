@@ -4,12 +4,18 @@ import sys
 
 tup = ([slice(10,30)],(3.14, 101), "hello")
 counts1 = [sys.getrefcount(thing) for thing in tup]
+tupcount1 = sys.getrefcount(tup)
 print('arguments:', tup)
 testmodule.basic_test(*tup)
 counts2 = [sys.getrefcount(thing) for thing in tup]
 if counts1 != counts2:
     print('-------------------------')
-    print('ERROR: refcounts do not match.')
+    print('ERROR: arg refcounts do not match.')
+    print('-------------------------')
+tupcount2 = sys.getrefcount(tup)
+if tupcount1 != tupcount2:
+    print('-------------------------')
+    print('ERROR: argtup refcounts do not match.')
     print('-------------------------')
 
 

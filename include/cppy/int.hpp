@@ -52,44 +52,40 @@ namespace cppy
 		static constexpr void* badc() { return NULL; }
 	};
 
-	template<>
-	struct Object<int, false>: CheckThrow<int>, Convertible<int, IntConvert>, Make<int>, Object<>
+	template<> struct Object<int&>: Object<PyObject&>, CheckThrow<int&>, Convertible<int&, IntConvert>
 	{
-		using CheckThrow<int>::checkthrow;
-		using Make<int>::Make;
+		using Object<PyObject&>::Object;
+
 		bool check() const { return PyLong_Check(this->obj); }
 		static constexpr const char* name() { return "int"; }
 	};
 
 
 	template<>
-	struct Object<int, true>: Managed<int>, Make<int, true>
+	struct Object<int>: Object<PyObject, int>
 	{
-		using Base = Make<int, true>;
+		using Base = Object<PyObject, int>;
 		using Base::Base;
 
 		// Create a new int.
-		Object(int val): Base(success(PyLong_FromLong(val))) {}
-		Object(long val): Base(success(PyLong_FromLong(val))) {}
-		Object(unsigned int val): Base(success(PyLong_FromUnsignedLong(val))) {}
-		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val))) {}
+		Object(int val): Base(success(PyLong_FromLong(val)), false) {}
+		Object(long val): Base(success(PyLong_FromLong(val)), false) {}
+		Object(unsigned int val): Base(success(PyLong_FromUnsignedLong(val)), false) {}
+		Object(unsigned long val): Base(success(PyLong_FromUnsignedLong(val)), false) {}
 		//typedef/alias results in repeated definitions.
-		//Object(Py_ssize_t val): Base(success(PyLong_FromSSize_t(val))) {}
-		//Object(std::size_t val): Base(success(PyLong_FromSize_t(val))) {}
-		Object(long long val): Base(success(PyLong_FromLongLong(val))) {}
-		Object(unsigned long long val): Base(success(PyLong_FromUnsignedLongLong(val))) {}
-		Object(double val): Base(success(PyLong_FromDouble(val))) {}
-		Object(const char *str, int base=0): Base(success(PyLong_FromString(str, NULL, base))) {}
-		Object(void *ptr): Base(success(PyLong_FromVoidPtr(ptr))) {}
+		//Object(Py_ssize_t val): Base(success(PyLong_FromSSize_t(val)), false) {}
+		//Object(std::size_t val): Base(success(PyLong_FromSize_t(val)), false) {}
+		Object(long long val): Base(success(PyLong_FromLongLong(val)), false) {}
+		Object(unsigned long long val): Base(success(PyLong_FromUnsignedLongLong(val)), false) {}
+		Object(double val): Base(success(PyLong_FromDouble(val)), false) {}
+		Object(const char *str, int base=0): Base(success(PyLong_FromString(str, NULL, base)), false) {}
+		Object(void *ptr): Base(success(PyLong_FromVoidPtr(ptr)), false) {}
 	};
 
 #define MAKE_CPPY_INT_TYPE(tp) \
-	template<bool m> \
-	struct Object<tp, m>: Object<int, m>, Make<tp, m> \
-	{ \
-		using Object<int,m>::Object; \
-		using Make<tp, m>::Make; \
-	}
+	template<> struct Object<tp&>: Object<int&> { using Object<int&>::Object; }; \
+	template<> struct Object<tp>: Object<int> { using Object<int>::Object; }
+
 
 MAKE_CPPY_INT_TYPE(unsigned int);
 MAKE_CPPY_INT_TYPE(short);
