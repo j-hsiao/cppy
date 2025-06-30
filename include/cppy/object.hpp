@@ -51,7 +51,6 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&, class Actual=T> struct Object;
 
-	//Immutable borrowed reference.
 	template<> struct Object<PyObject&> {
 		PyObject *obj;
 
@@ -114,23 +113,25 @@ namespace cppy
 		}
 	};
 
-	//Owned object.
-	template<class Actual> struct Object<PyObject, Actual>: Object<Actual&> {
-		Object(PyObject *obj, bool preincr) noexcept: Object<Actual&>(obj) {
-			if (!preincr) {
-				std::cout << "manual incref" << std::endl;
-				Py_INCREF(obj);
-			}
-		}
-		Object(PyObject *obj) noexcept: Object<Actual&>(obj) { Py_INCREF(obj); }
-		Object(const PyObject &obj) noexcept: Object<Actual&>(const_cast<PyObject*>(&obj))
-		{
-			std::cout << "Manual incref*" << std::endl;
-			Py_INCREF(&obj);
-		}
+	//Intermediate for copy constructors from refs.
+	template<> struct Object<PyObject&, void>: Object<PyObject&> {
+		using Base = Object<PyObject&>;
+		using Base::Base;
+		Object(const Object &o) noexcept: Base(o.obj) {}
+		Object(const Base &o) noexcept: Base(o.obj) {}
+	};
 
+	//Intermediate owned object for ref handling constructors and destructors.
+	template<class Actual> struct Object<PyObject, Actual>: Object<Actual&> {
+		using Base = Object<Actual&>;
+		using Base::Base;
+
+		Object(const Object &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
+		Object(Object &&o) noexcept: Base(o.ret()) {}
+
+		Object(const Object<PyObject&> &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
 		template<class OActual>
-		Object(Object<PyObject, OActual> &&o) noexcept: Object<Actual&>(o.ret(), true) {}
+		Object(Object<PyObject, OActual> &&o) noexcept: Base(o.ret()) {}
 
 		PyObject* ret() {
 			PyObject *ret = this->obj;
@@ -145,7 +146,7 @@ namespace cppy
 	{
 		PyObject *ret = PyObject_GetAttrString(obj, attr_name);
 		if (!ret) { throw PyError(); }
-		return ret;
+		return Object<PyObject>(ret);
 	}
 
 	//const __getitem__
@@ -153,7 +154,7 @@ namespace cppy
 	{
 		PyObject *ret = PyObject_GetItem(obj, key);
 		if (!ret) { throw PyError(); }
-		return Object<PyObject>(ret, true);
+		return Object<PyObject>(ret);
 	}
 	Object<PyObject> Object<>::operator[](PyObject *key) const
 	{ return getitem(key); }
