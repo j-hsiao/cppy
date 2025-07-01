@@ -6,15 +6,19 @@
 //This will be automatically included by object.hpp
 //for use with repr/str.  It should not be explicitly included.
 #include <cppy/errors.hpp>
+#include <cppy/mixin.hpp>
+
 #include <cstring>
 #include <string>
 #include <ostream>
 
+
 namespace cppy
 {
-	template<> struct Object<const char*&>: Object<PyObject&>
+	template<> struct Object<const char*&>: Object<PyObject&, void>, CheckThrow<const char*&>
 	{
-		using Object<PyObject&>::Object;
+		using Base = Object<PyObject&, void>;
+		using Base::Base;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }

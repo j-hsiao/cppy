@@ -56,12 +56,12 @@ namespace cppy
 
 		Object() noexcept: obj(nullptr) {}
 		Object(PyObject *obj) noexcept: obj(obj) {}
-		Object(PyObject &obj) noexcept: obj(&obj) {}
+		Object(const Object &obj) noexcept: obj(obj.obj) {}
+		template<class Actual> Object(Object<PyObject, Actual> &&o) = delete;
 
-		operator PyObject&() const { return *this->obj; }
-
-		const Object& object() const { return *this; }
-		Object& object() { return *this; }
+		const Object& object() const& { return *this; }
+		Object& object() & { return *this; }
+		Object&& object() && { return static_cast<Object&&>(*this); }
 
 		PyObject* ret() const { return obj; }
 		bool check() const { return true; }
@@ -105,19 +105,18 @@ namespace cppy
 			if (ret < 0) { throw PyError(); }
 			return ret;
 		}
-		operator bool() const
-		{
+		operator bool() const {
 			int result = PyObject_IsTrue(obj);
 			if (result < 0) { throw PyError(); }
 			return result == 1;
 		}
+		bool is_none() const { return obj == Py_None; }
 	};
 
 	//Intermediate for copy constructors from refs.
 	template<> struct Object<PyObject&, void>: Object<PyObject&> {
 		using Base = Object<PyObject&>;
 		using Base::Base;
-		Object(const Object &o) noexcept: Base(o.obj) {}
 		Object(const Base &o) noexcept: Base(o.obj) {}
 	};
 
@@ -127,9 +126,9 @@ namespace cppy
 		using Base::Base;
 
 		Object(const Object &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
-		Object(Object &&o) noexcept: Base(o.ret()) {}
-
 		Object(const Object<PyObject&> &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
+
+		Object(Object &&o) noexcept: Base(o.ret()) {}
 		template<class OActual>
 		Object(Object<PyObject, OActual> &&o) noexcept: Base(o.ret()) {}
 

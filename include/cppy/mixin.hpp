@@ -33,8 +33,9 @@ namespace cppy
 			return std::move(derived());
 		}
 		private:
-			Derived& derived() { return static_cast<Derived&>(*this); }
-			const Derived& derived() const { return static_cast<Derived&>(*this); }
+			Derived&& derived() && { return static_cast<Derived&&>(*this); }
+			Derived& derived() & { return static_cast<Derived&>(*this); }
+			const Derived& derived() const& { return static_cast<Derived&>(*this); }
 	};
 
 	// Mixin for derived objects that can be converted to some c type.
