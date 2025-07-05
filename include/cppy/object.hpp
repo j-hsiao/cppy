@@ -15,29 +15,32 @@
 #ifndef CPPY_PYOBJ_HPP
 #define CPPY_PYOBJ_HPP
 
-//#include <cppy/mixin.hpp>
 #include <cppy/errors.hpp>
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
-#include <iostream>
+#include <type_traits>
 
 namespace cppy
 {
 	//Item proxy for getitem/setitem
-	template<class Container, class Key>
+	template<class Container_, class Key>
 	struct ItemProxy
 	{
-		Container obj;
+		typedef typename std::remove_reference<Container_>::type Container;
+		Container_ obj;
 		Key key;
 
 		template<class T, class V>
 		ItemProxy(T &&cont, V &&k): obj(std::forward<T>(cont)), key(std::forward<V>(k)) {}
 
-		decltype(const_cast<const Container&>(obj).getitem(key)) operator()() const { return obj.getitem(key); }
-		operator decltype(const_cast<const Container&>(obj).getitem(key))() const { return obj.getitem(key); }
+		decltype(const_cast<const Container&>(obj).getitem(key)) operator()() const
+		{ return const_cast<const Container&>(obj).getitem(key); }
+
+		operator decltype(const_cast<const Container&>(obj).getitem(key))() const
+		{ return const_cast<const Container&>(obj).getitem(key); }
 
 		template<class T>
 		ItemProxy& operator=(T &&value) {
@@ -49,7 +52,7 @@ namespace cppy
 	//------------------------------
 	//Generic base python object and methods.
 	//------------------------------
-	template<class T=PyObject&, class Actual=T> struct Object;
+	template<class T=PyObject&> struct Object;
 
 	template<> struct Object<PyObject&> {
 		PyObject *obj;
@@ -57,7 +60,7 @@ namespace cppy
 		Object() noexcept: obj(nullptr) {}
 		Object(PyObject *obj) noexcept: obj(obj) {}
 		Object(const Object &obj) noexcept: obj(obj.obj) {}
-		template<class Actual> Object(Object<PyObject, Actual> &&o) = delete;
+		Object(Object<PyObject> &&o) = delete;
 
 		const Object& object() const& { return *this; }
 		Object& object() & { return *this; }
@@ -73,33 +76,51 @@ namespace cppy
 		//str
 		Object<const char*> str() const;
 
-		// getattr()
+		//getattr()
 		Object<PyObject> attr(const char *attr_name) const;
 
-		// __getitem__
+		//__getitem__ (const)
 		Object<PyObject> getitem(PyObject*) const;
-		Object<PyObject> operator[](PyObject*) const;
+		Object<PyObject> getitem(const Object<> &key) const;
 		template<class Key> Object<PyObject> getitem(const Key &key) const;
-		template<class Key> Object<PyObject> operator[](const Key &key) const;
-		template<class c1, class c2> Object<PyObject> getitem(const Object<c1, c2> &key) const;
-		template<class c1, class c2> Object<PyObject> operator[](const Object<c1, c2> &key) const;
+		template<class Key> Object<PyObject> getitem(const Object<Key> &key) const;
+		template<class T> Object<PyObject> operator[](T &&t) const;
 
 
-		//mutable __getitem__
-		ItemProxy<Object<>, PyObject*> getitem(PyObject*);
-		ItemProxy<Object<>, PyObject*> operator[](PyObject *key);
-		template<class Key> ItemProxy<Object<>, const Key&> getitem(const Key &key);
-		template<class Key> ItemProxy<Object<>, const Key&> operator[](const Key &key);
-		template<class c1, class c2> ItemProxy<Object<>, const Object<c1, c2>&> getitem(const Object<c1, c2> &key);
-		template<class c1, class c2> ItemProxy<Object<>, const Object<c1, c2>&> operator[](const Object<c1, c2> &key);
+		//If mutable, return a proxy to allow syntaxes:
+		//	something = obj[key]
+		//	and obj[key] = value
+		template<class Key> ItemProxy<Object<>&, const Key&> getitem(const Key &key)
+		{ return ItemProxy<Object<>&, const Key&>(*this, key); }
+		template<class Key> ItemProxy<Object<>&, const Key&> operator[](const Key &key)
+		{ return getitem(key); }
 
-		// __setitem__
+		//__setitem__
 		void setitem(PyObject *key, PyObject *val)
 		{ if (PyObject_SetItem(obj, key, val) == -1) { throw PyError(); } }
-		void setitem(const PyObject &key, PyObject *val) { setitem(const_cast<PyObject*>(&key), val); }
-		void setitem(PyObject *key, const PyObject &val) { setitem(key, const_cast<PyObject*>(&val)); }
-		void setitem(const PyObject &key, const PyObject &val) { setitem(key, const_cast<PyObject*>(&val)); }
+		void setitem(const Object<> &key, PyObject *val) { setitem(key.obj, val); }
+		void setitem(PyObject *key, const Object<> &val) { setitem(key, val.obj); }
+		void setitem(const Object<> &key, const Object<> &val) { setitem(key.obj, val.obj); }
+		template<class Key, class Value>
+		void setitem(const Key &key, Value &&value) {
+			setitem(
+				Object<Key>(key).obj,
+				Object<typename std::remove_reference<Value>::type>(std::forward<Value>(value)).obj);
+		}
+		template<class Key, class Value>
+		void setitem(const Object<Key> &key, Value &&value) {
+			setitem(
+				key.obj,
+				Object<typename std::remove_reference<Value>::type>(std::forward<Value>(value)).obj);
+		}
+		template<class Key, class Value>
+		void setitem(const Key &key, const Object<Value> &value)
+		{ setitem(Object<Key>(key).obj, value.obj); }
+		template<class Key, class Value>
+		void setitem(const Object<Key> &key, const Object<Value> &value)
+		{ setitem(key.obj, value.obj); }
 
+		//__len__
 		Py_ssize_t size() const {
 			auto ret = PyObject_Size(obj);
 			if (ret < 0) { throw PyError(); }
@@ -113,32 +134,35 @@ namespace cppy
 		bool is_none() const { return obj == Py_None; }
 	};
 
-	//Intermediate for copy constructors from refs.
-	template<> struct Object<PyObject&, void>: Object<PyObject&> {
+	//Intermediate for copy constructors from borrowed refs.
+	struct Borrowed: Object<PyObject&> {
 		using Base = Object<PyObject&>;
 		using Base::Base;
-		Object(const Base &o) noexcept: Base(o.obj) {}
+		Borrowed(const Base &o) noexcept: Base(o.obj) {}
 	};
 
-	//Intermediate owned object for ref handling constructors and destructors.
-	template<class Actual> struct Object<PyObject, Actual>: Object<Actual&> {
+	//Intermediate owned object for automatic refcounting.
+	template<class Actual> struct Owned: Object<Actual&> {
 		using Base = Object<Actual&>;
 		using Base::Base;
 
-		Object(const Object &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
-		Object(const Object<PyObject&> &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
+		Owned(const Owned &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
+		Owned(Owned &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
 
-		Object(Object &&o) noexcept: Base(o.ret()) {}
+		Owned(const Object<> &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
 		template<class OActual>
-		Object(Object<PyObject, OActual> &&o) noexcept: Base(o.ret()) {}
+		Owned(Owned<OActual> &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
 
 		PyObject* ret() {
 			PyObject *ret = this->obj;
 			this->obj = nullptr;
 			return ret;
 		}
-		~Object() { Py_XDECREF(this->obj); }
+		~Owned() { Py_XDECREF(this->obj); }
 	};
+
+	//owned generic object
+	template<> struct Object<PyObject>: Owned<PyObject> { using Owned<PyObject>::Owned; };
 
 	//getattr
 	inline Object<PyObject> Object<>::attr(const char *attr_name) const
@@ -155,32 +179,14 @@ namespace cppy
 		if (!ret) { throw PyError(); }
 		return Object<PyObject>(ret);
 	}
-	Object<PyObject> Object<>::operator[](PyObject *key) const
-	{ return getitem(key); }
+	inline Object<PyObject> Object<>::getitem(const Object<> &key) const
+	{ return getitem(key.obj); }
 	template<class Key> Object<PyObject> Object<>::getitem(const Key &key) const
 	{ return getitem(Object<Key>(key)); }
-	template<class Key> Object<PyObject> Object<>::operator[](const Key &key) const
-	{ return getitem(Object<Key>(key)); }
-	template<class c1, class c2> Object<PyObject> Object<>::getitem(const Object<c1, c2> &key) const
+	template<class Key> Object<PyObject> Object<>::getitem(const Object<Key> &key) const
 	{ return getitem(key.obj); }
-	template<class c1, class c2> Object<PyObject> Object<>::operator[](const Object<c1, c2> &key) const
-	{ return getitem(key.obj); }
-
-	//mutable __getitem__
-	ItemProxy<Object<>, PyObject*> Object<>::getitem(PyObject *key)
-	{ return ItemProxy<Object<>, PyObject*>(*this, key); }
-
-	ItemProxy<Object<>, PyObject*> Object<>::operator[](PyObject *key) { return getitem(key); }
-
-	template<class Key> ItemProxy<Object<>, const Key&> Object<>::getitem(const Key &key)
-	{ return ItemProxy<Object<>, const Key&>(*this, key); }
-	template<class Key> ItemProxy<Object<>, const Key&> Object<>::operator[](const Key &key)
-	{ return ItemProxy<Object<>, const Key&>(*this, key); }
-
-	template<class c1, class c2> ItemProxy<Object<>, const Object<c1, c2>&> Object<>::getitem(const Object<c1, c2> &key)
-	{ return ItemProxy<Object<>, PyObject*>(*this, key); }
-	template<class c1, class c2> ItemProxy<Object<>, const Object<c1, c2>&> Object<>::operator[](const Object<c1, c2> &key)
-	{ return ItemProxy<Object<>, PyObject*>(*this, key); }
+	template<class T> Object<PyObject> Object<>::operator[](T &&t) const
+	{ return getitem(std::forward<T>(t)); }
 
 	//More convenient for argument conversion
 	template<class T> struct Object<Object<T>>
@@ -191,21 +197,4 @@ namespace cppy
 	};
 }
 
-#include "cppy/string.hpp"
-namespace cppy
-{
-	Object<const char*> Object<>::repr() const
-	{
-		PyObject *ret = PyObject_Repr(obj);
-		if (!ret) { throw PyError(); }
-		return Object<const char*>(ret, true);
-	}
-
-	Object<const char*> Object<>::str() const
-	{
-		PyObject *ret = PyObject_Str(obj);
-		if (!ret) { throw PyError(); }
-		return Object<const char*>(ret, true);
-	}
-}
 #endif//CPPY_PYOBJ_HPP

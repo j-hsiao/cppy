@@ -3,8 +3,7 @@
 #ifndef CPPY_STRING_HPP
 #define CPPY_STRING_HPP
 
-//This will be automatically included by object.hpp
-//for use with repr/str.  It should not be explicitly included.
+#include <cppy/object.hpp>
 #include <cppy/errors.hpp>
 #include <cppy/mixin.hpp>
 
@@ -12,13 +11,11 @@
 #include <string>
 #include <ostream>
 
-
 namespace cppy
 {
-	template<> struct Object<const char*&>: Object<PyObject&, void>, CheckThrow<const char*&>
+	template<> struct Object<const char*&>: CheckThrow<const char*&>, Borrowed
 	{
-		using Base = Object<PyObject&, void>;
-		using Base::Base;
+		using Borrowed::Borrowed;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
@@ -50,12 +47,18 @@ namespace cppy
 		}
 	};
 
-	template<> struct Object<const char*>: Object<PyObject, const char*>
+	std::ostream& operator<<(std::ostream &o, const Object<const char*&> &str) {
+		auto tmp = str.utf8();
+		o.write(tmp.data, tmp.size);
+		return o;
+	}
+
+	template<> struct Object<const char*>: Owned<const char*>
 	{
-		using Object<PyObject, const char*>::Object;
+		using Owned<const char*>::Owned;
 
 		Object(const char *data, Py_ssize_t size):
-			Object<PyObject, const char*>(success(PyUnicode_FromStringAndSize(data, size)), true)
+			Owned<const char*>(success(PyUnicode_FromStringAndSize(data, size)))
 		{}
 		template<std::size_t N> Object(const char (&data)[N]): Object(data, N-1) {}
 		Object(const char *data): Object(data, std::strlen(data)) {}
@@ -67,11 +70,15 @@ namespace cppy
 	struct Object<const char (&)[N]>: Object<const char*>
 	{ using Object<const char*>::Object; };
 
-	std::ostream& operator<<(std::ostream &o, const Object<const char*> &str)
-	{
-		auto tmp = str.utf8();
-		o.write(tmp.data, tmp.size);
-		return o;
-	}
+
+
+	//------------------------------
+	//generic object methods that return strs
+	//------------------------------
+	Object<const char*> Object<>::repr() const
+	{ return Object<const char*>(success(PyObject_Repr(obj))); }
+	Object<const char*> Object<>::str() const
+	{ return Object<const char*>(success(PyObject_Str(obj))); }
+
 }
 #endif//CPPY_STRING_HPP

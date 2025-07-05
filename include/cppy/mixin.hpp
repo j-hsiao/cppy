@@ -6,7 +6,7 @@
 #include <utility>
 namespace cppy
 {
-	template<class T, class Actual> struct Object;
+	template<class T> struct Object;
 
 	//Mix in to add checkthrow methods.
 	//The Derived class should define a bool check() const
@@ -15,23 +15,16 @@ namespace cppy
 	struct CheckThrow
 	{
 		using Derived = Object<T>;
+#		define CHECKTHROW(prefix, suffix) \
+		prefix Derived suffix checkthrow() prefix suffix { \
+			throwifnot(derived().check(), derived().name()); \
+			return derived(); \
+		}
+		CHECKTHROW(const, &)
+		CHECKTHROW(, &)
+		CHECKTHROW(, &&)
+#		undef CHECKTHROW
 
-		const Derived& checkthrow() const&
-		{
-			throwifnot(derived().check(), derived().name());
-			return derived();
-		}
-		Derived& checkthrow() &
-		{
-			throwifnot(derived().check(), derived().name());
-			return derived();
-		}
-
-		Derived&& checkthrow() &&
-		{
-			throwifnot(derived().check(), derived().name());
-			return std::move(derived());
-		}
 		private:
 			Derived&& derived() && { return static_cast<Derived&&>(*this); }
 			Derived& derived() & { return static_cast<Derived&>(*this); }
@@ -56,8 +49,7 @@ namespace cppy
 		O to() const {
 			typedef Converter<O> conv;
 			O val = conv::toc(static_cast<const Derived*>(this)->obj);
-			if (val == conv::badc() && PyErr_Occurred() != NULL)
-			{ throw PyError(); }
+			if (val == conv::badc() && PyErr_Occurred() != NULL) { throw PyError(); }
 			return val;
 		}
 		template<class O> operator O() const { return to<O>(); }
