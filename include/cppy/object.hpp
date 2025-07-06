@@ -16,6 +16,7 @@
 #define CPPY_PYOBJ_HPP
 
 #include <cppy/errors.hpp>
+#include <cppy/mixin/keyed.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -25,36 +26,12 @@
 
 namespace cppy
 {
-	//Item proxy for getitem/setitem
-	template<class Container_, class Key>
-	struct ItemProxy
-	{
-		typedef typename std::remove_reference<Container_>::type Container;
-		Container_ obj;
-		Key key;
-
-		template<class T, class V>
-		ItemProxy(T &&cont, V &&k): obj(std::forward<T>(cont)), key(std::forward<V>(k)) {}
-
-		decltype(const_cast<const Container&>(obj).getitem(key)) operator()() const
-		{ return const_cast<const Container&>(obj).getitem(key); }
-
-		operator decltype(const_cast<const Container&>(obj).getitem(key))() const
-		{ return const_cast<const Container&>(obj).getitem(key); }
-
-		template<class T>
-		ItemProxy& operator=(T &&value) {
-			obj.setitem(key, std::forward<T>(value));
-			return *this;
-		}
-	};
-
 	//------------------------------
 	//Generic base python object and methods.
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&> {
+	template<> struct Object<PyObject&>: Keyed<PyObject&> {
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}
@@ -81,19 +58,12 @@ namespace cppy
 
 		//__getitem__ (const)
 		Object<PyObject> getitem(PyObject*) const;
-		Object<PyObject> getitem(const Object<> &key) const;
-		template<class Key> Object<PyObject> getitem(const Key &key) const;
-		template<class Key> Object<PyObject> getitem(const Object<Key> &key) const;
-		template<class T> Object<PyObject> operator[](T &&t) const;
+		//Object<PyObject> getitem(const Object<> &key) const;
+		//template<class Key> Object<PyObject> getitem(const Key &key) const;
+		//template<class Key> Object<PyObject> getitem(const Object<Key> &key) const;
+		//template<class T> Object<PyObject> operator[](T &&t) const;
 
-
-		//If mutable, return a proxy to allow syntaxes:
-		//	something = obj[key]
-		//	and obj[key] = value
-		template<class Key> ItemProxy<Object<>&, const Key&> getitem(const Key &key)
-		{ return ItemProxy<Object<>&, const Key&>(*this, key); }
-		template<class Key> ItemProxy<Object<>&, const Key&> operator[](const Key &key)
-		{ return getitem(key); }
+		using Keyed<PyObject&>::getitem;
 
 		//__setitem__
 		void setitem(PyObject *key, PyObject *val)
@@ -179,14 +149,14 @@ namespace cppy
 		if (!ret) { throw PyError(); }
 		return Object<PyObject>(ret);
 	}
-	inline Object<PyObject> Object<>::getitem(const Object<> &key) const
-	{ return getitem(key.obj); }
-	template<class Key> Object<PyObject> Object<>::getitem(const Key &key) const
-	{ return getitem(Object<Key>(key)); }
-	template<class Key> Object<PyObject> Object<>::getitem(const Object<Key> &key) const
-	{ return getitem(key.obj); }
-	template<class T> Object<PyObject> Object<>::operator[](T &&t) const
-	{ return getitem(std::forward<T>(t)); }
+	//inline Object<PyObject> Object<>::getitem(const Object<> &key) const
+	//{ return getitem(key.obj); }
+	//template<class Key> Object<PyObject> Object<>::getitem(const Key &key) const
+	//{ return getitem(Object<Key>(key)); }
+	//template<class Key> Object<PyObject> Object<>::getitem(const Object<Key> &key) const
+	//{ return getitem(key.obj); }
+	//template<class T> Object<PyObject> Object<>::operator[](T &&t) const
+	//{ return getitem(std::forward<T>(t)); }
 
 	//More convenient for argument conversion
 	template<class T> struct Object<Object<T>>
