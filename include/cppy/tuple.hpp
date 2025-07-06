@@ -13,13 +13,10 @@ namespace cppy
 {
 	struct Tuple_{};
 
-	template<bool m=false>
-	using Tuple = Object<Tuple_,m>;
-
-	template<> struct Object<Tuple_, false>: CheckThrow<Tuple_>, Make<Tuple_>, Object<>
+	template<> struct Object<Tuple_&>: CheckThrow<Tuple_&>, Borrowed
 	{
-		using Make<Tuple_>::Make;
-		using CheckThrow<Tuple_>::checkthrow;
+		using Borrowed::Borrowed;
+
 		bool check() const { return PyTuple_Check(obj); }
 		static constexpr const char* name() { return "Tuple"; }
 
@@ -30,8 +27,7 @@ namespace cppy
 		}
 
 		// Tuples return a borrowed reference
-		template<class T=PyObject*>
-		Object<T> getitem(Py_ssize_t pos) const
+		Object<> getitem(Py_ssize_t pos) const
 		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
 
 		//setitem, steals a reference.
