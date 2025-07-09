@@ -16,7 +16,7 @@
 #define CPPY_PYOBJ_HPP
 
 #include <cppy/errors.hpp>
-#include <cppy/mixin/keyed.hpp>
+#include <cppy/mixin/mapping.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -31,7 +31,7 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&>: Keyed<PyObject&> {
+	template<> struct Object<PyObject&>: Mapping<PyObject&, Object<PyObject>> {
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}
@@ -63,7 +63,7 @@ namespace cppy
 		//template<class Key> Object<PyObject> getitem(const Object<Key> &key) const;
 		//template<class T> Object<PyObject> operator[](T &&t) const;
 
-		using Keyed<PyObject&>::getitem;
+		using Mapping<PyObject&, Object<PyObject>>::getitem;
 
 		//__setitem__
 		void setitem(PyObject *key, PyObject *val)
@@ -71,24 +71,7 @@ namespace cppy
 		void setitem(const Object<> &key, PyObject *val) { setitem(key.obj, val); }
 		void setitem(PyObject *key, const Object<> &val) { setitem(key, val.obj); }
 		void setitem(const Object<> &key, const Object<> &val) { setitem(key.obj, val.obj); }
-		template<class Key, class Value>
-		void setitem(const Key &key, Value &&value) {
-			setitem(
-				Object<Key>(key).obj,
-				Object<typename std::remove_reference<Value>::type>(std::forward<Value>(value)).obj);
-		}
-		template<class Key, class Value>
-		void setitem(const Object<Key> &key, Value &&value) {
-			setitem(
-				key.obj,
-				Object<typename std::remove_reference<Value>::type>(std::forward<Value>(value)).obj);
-		}
-		template<class Key, class Value>
-		void setitem(const Key &key, const Object<Value> &value)
-		{ setitem(Object<Key>(key).obj, value.obj); }
-		template<class Key, class Value>
-		void setitem(const Object<Key> &key, const Object<Value> &value)
-		{ setitem(key.obj, value.obj); }
+
 
 		//__len__
 		Py_ssize_t size() const {

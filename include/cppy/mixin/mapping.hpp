@@ -1,8 +1,6 @@
 #ifndef CPPY_MIXIN_KEYED_HPP
 #define CPPY_MIXIN_KEYED_HPP
 
-#include <cppy/mixin/derived.hpp>
-
 namespace cppy {
 
 	//Item proxy for getitem/setitem
@@ -34,31 +32,50 @@ namespace cppy {
 	//Base class should define:
 	//	getitem(PyObject*) const
 	//	setitem(PyObject*, PyObject*)
-	template<class T, template<class> class Object=Object>
-	struct Keyed {
+	template<class T, class constval, template<class> class Object=Object>
+	struct Mapping {
 		using Derived = Object<T>;
 
-		template<class Key> decltype(auto) getitem(const Key &key) const {
-			return derived().getitem(Object<Key>(key).obj);
+		//const __getitem__
+		template<class Key> constval getitem(const Key &key) const {
+			return static_cast<const Derived&>(*this).getitem(Object<Key>(key).obj);
 		}
-		template<class Key> decltype(auto) getitem(const Object<Key> &key) const {
-			return derived().getitem(key.obj);
+		template<class Key> constval getitem(const Object<Key> &key) const {
+			return static_cast<const Derived&>(*this).getitem(key.obj);
+		}
+		template<class Key> constval operator[](const Key &key) const& {
+			return static_cast<const Derived&>(*this).getitem(key);
 		}
 
+		//__getitem__ proxy
 		template<class Key> ItemProxy<Derived&, const Key&> getitem(const Key &key) {
-			return ItemProxy<Derived&, const Key&>(derived(), key);
+			return ItemProxy<Derived&, const Key&>(static_cast<Derived&>(*this), key);
+		}
+		template<class Key> ItemProxy<Derived&, const Key&> operator[](const Key &key) & {
+			return getitem(key);
 		}
 
-		decltype(auto) operator[](PyObject *p) const { return derived().getitem(p); }
-		template<class Key> decltype(auto) operator[](Key &&key) const {
-			return getitem(std::forward<Key>(key));
+		//__setitem__
+		template<class Key, class Value>
+		void setitem(Key &&key, const Object<Value> &val) {
+			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), val.obj);
 		}
-		template<class Key> decltype(auto) operator[](Key &&key) {
-			return getitem(std::forward<Key>(key));
+		template<class Key, class Value>
+		void setitem(Key &&key, const Value &val) {
+			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
+		}
+		template<class Key, class Value>
+		void setitem(Key &&key, const Value &val) {
+			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
 		}
 
-		private:
-			MIXIN_DEFINE_DERIVED
+
+
+
+
+
+
+
 	};
 
 }

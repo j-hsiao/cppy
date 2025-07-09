@@ -1,11 +1,11 @@
 #ifndef CPPY_TUPLE_HPP
 #define CPPY_TUPLE_HPP
 
-#include "cppy/object.hpp"
-#include "cppy/int.hpp"
-#include "cppy/mixin.hpp"
-#include "cppy/util.hpp"
-#include <iostream>
+#include <cppy/errors.hpp>
+#include <cppy/object.hpp>
+#include <cppy/int.hpp>
+#include <cppy/mixin/mapping.hpp>
+#include <cppy/util.hpp>
 
 #include <utility>
 
@@ -13,9 +13,10 @@ namespace cppy
 {
 	struct Tuple_{};
 
-	template<> struct Object<Tuple_&>: CheckThrow<Tuple_&>, Borrowed
+	template<> struct Object<Tuple_&>: CheckThrow<Tuple_&>, Mapping<Tuple_&,Object<>>, Borrowed
 	{
 		using Borrowed::Borrowed;
+
 
 		bool check() const { return PyTuple_Check(obj); }
 		static constexpr const char* name() { return "Tuple"; }
@@ -26,6 +27,7 @@ namespace cppy
 			return ret;
 		}
 
+		using Mapping<Tuple_&, Object<>>::getitem
 		// Tuples return a borrowed reference
 		Object<> getitem(Py_ssize_t pos) const
 		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
