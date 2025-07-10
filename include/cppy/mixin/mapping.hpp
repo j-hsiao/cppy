@@ -3,6 +3,12 @@
 
 namespace cppy {
 
+	template<class T>
+	struct ArrowWrap {
+		T item;
+		T* operator->() { return &item; }
+	};
+
 	//Item proxy for getitem/setitem
 	template<class Container_, class Key>
 	struct ItemProxy
@@ -14,10 +20,13 @@ namespace cppy {
 		template<class T, class V>
 		ItemProxy(T &&cont, V &&k): obj(std::forward<T>(cont)), key(std::forward<V>(k)) {}
 
-		decltype(const_cast<const Container&>(obj).getitem(key)) operator()() const
-		{ return const_cast<const Container&>(obj).getitem(key); }
 
-		operator decltype(const_cast<const Container&>(obj).getitem(key))() const
+		typedef decltype(const_cast<const Container&>(obj).getitem(key)) Value;
+		ArrowWrap<Value> operator->() const {
+			return {const_cast<const Container&>(obj).getitem(key)};
+		}
+
+		operator Value() const
 		{ return const_cast<const Container&>(obj).getitem(key); }
 
 		template<class T>
@@ -56,18 +65,18 @@ namespace cppy {
 		}
 
 		//__setitem__
-		template<class Key, class Value>
-		void setitem(Key &&key, const Object<Value> &val) {
-			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), val.obj);
-		}
-		template<class Key, class Value>
-		void setitem(Key &&key, const Value &val) {
-			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
-		}
-		template<class Key, class Value>
-		void setitem(Key &&key, const Value &val) {
-			static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
-		}
+		//template<class Key, class Value>
+		//void setitem(Key &&key, const Object<Value> &val) {
+		//	static_cast<Derived&>(*this).setitem(std::forward<Key>(key), val.obj);
+		//}
+		//template<class Key, class Value>
+		//void setitem(Key &&key, const Value &val) {
+		//	static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
+		//}
+		//template<class Key, class Value>
+		//void setitem(Key &&key, const Value &val) {
+		//	static_cast<Derived&>(*this).setitem(std::forward<Key>(key), Object<Value>(val).obj);
+		//}
 
 
 
