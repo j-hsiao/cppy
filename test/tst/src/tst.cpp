@@ -35,7 +35,7 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 		std::cout << "indexing const generic borrowed reference." << std::endl;
 		const cppy::Object<> args(args_);
 		for (int i=0; i<args.size(); ++i)
-		{ std::cout << "    " << i << ": " << args[i].str() << std::endl; }
+		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
 	}
 
 

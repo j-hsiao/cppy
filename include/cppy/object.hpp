@@ -31,12 +31,13 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&>: Mapping<PyObject&, Object<PyObject>> {
+	template<> struct Object<PyObject&>: Mapping<PyObject&> {
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}
 		Object(PyObject *obj) noexcept: obj(obj) {}
 		Object(const Object &obj) noexcept: obj(obj.obj) {}
+		//No references to temporaries.
 		Object(Object<PyObject> &&o) = delete;
 
 		const Object& object() const& { return *this; }
@@ -58,20 +59,15 @@ namespace cppy
 
 		//__getitem__ (const)
 		Object<PyObject> getitem(PyObject*) const;
-		//Object<PyObject> getitem(const Object<> &key) const;
-		//template<class Key> Object<PyObject> getitem(const Key &key) const;
-		//template<class Key> Object<PyObject> getitem(const Object<Key> &key) const;
-		//template<class T> Object<PyObject> operator[](T &&t) const;
-
-		using Mapping<PyObject&, Object<PyObject>>::getitem;
 
 		//__setitem__
-		void setitem(PyObject *key, PyObject *val)
-		{ if (PyObject_SetItem(obj, key, val) == -1) { throw PyError(); } }
-		void setitem(const Object<> &key, PyObject *val) { setitem(key.obj, val); }
-		void setitem(PyObject *key, const Object<> &val) { setitem(key, val.obj); }
-		void setitem(const Object<> &key, const Object<> &val) { setitem(key.obj, val.obj); }
+		void setitem(PyObject *key, PyObject *val) {
+			if (PyObject_SetItem(obj, key, val) == -1)
+			{ throw PyError(); }
+		}
 
+		using Mapping<PyObject&>::getitem;
+		using Mapping<PyObject&>::setitem;
 
 		//__len__
 		Py_ssize_t size() const {
@@ -95,7 +91,8 @@ namespace cppy
 	};
 
 	//Intermediate owned object for automatic refcounting.
-	template<class Actual> struct Owned: Object<Actual&> {
+	template<class Actual=PyObject>
+	struct Owned: Object<Actual&> {
 		using Base = Object<Actual&>;
 		using Base::Base;
 
