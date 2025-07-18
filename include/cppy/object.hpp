@@ -17,6 +17,7 @@
 
 #include <cppy/errors.hpp>
 #include <cppy/mixin/mapping.hpp>
+#include <cppy/convert/pyobject.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -31,7 +32,9 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&>: Mapping<PyObject&> {
+	template<> struct Object<PyObject&>:
+		Mapping<Object<>, PyObjectConverter<Object>, PyObjectConverter<Object>>
+	{
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}
@@ -58,16 +61,16 @@ namespace cppy
 		Object<PyObject> attr(const char *attr_name) const;
 
 		//__getitem__ (const)
-		Object<PyObject> getitem(PyObject*) const;
+		template<class T>
+		Object<PyObject> getitem(T &&t) const;
 
 		//__setitem__
-		void setitem(PyObject *key, PyObject *val) {
-			if (PyObject_SetItem(obj, key, val) == -1)
+		template<class Key, class Val>
+		void setitem(Key &&key, Val &&val) {
+			PyObjectConverter<Object> cvt;
+			if (PyObject_SetItem(obj, cvt(key), cvt(val)) == -1)
 			{ throw PyError(); }
 		}
-
-		using Mapping<PyObject&>::getitem;
-		using Mapping<PyObject&>::setitem;
 
 		//__len__
 		Py_ssize_t size() const {
@@ -123,20 +126,13 @@ namespace cppy
 	}
 
 	//const __getitem__
-	inline Object<PyObject> Object<>::getitem(PyObject *key) const
+	template<class Key>
+	inline Object<PyObject> Object<>::getitem(Key &&key) const
 	{
-		PyObject *ret = PyObject_GetItem(obj, key);
+		PyObject *ret = PyObject_GetItem(obj, PyObjectConverter<Object>{}(key));
 		if (!ret) { throw PyError(); }
 		return Object<PyObject>(ret);
 	}
-	//inline Object<PyObject> Object<>::getitem(const Object<> &key) const
-	//{ return getitem(key.obj); }
-	//template<class Key> Object<PyObject> Object<>::getitem(const Key &key) const
-	//{ return getitem(Object<Key>(key)); }
-	//template<class Key> Object<PyObject> Object<>::getitem(const Object<Key> &key) const
-	//{ return getitem(key.obj); }
-	//template<class T> Object<PyObject> Object<>::operator[](T &&t) const
-	//{ return getitem(std::forward<T>(t)); }
 
 	//More convenient for argument conversion
 	template<class T> struct Object<Object<T>>

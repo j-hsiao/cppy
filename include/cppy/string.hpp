@@ -5,7 +5,7 @@
 
 #include <cppy/object.hpp>
 #include <cppy/errors.hpp>
-#include <cppy/mixin.hpp>
+#include <cppy/mixin/checkthrow.hpp>
 
 #include <cstring>
 #include <string>

@@ -4,6 +4,13 @@
 #include <utility>
 namespace cppy
 {
+	template<class T> std::true_type is(const T &);
+	template<template<class...>class T, class...Targs> std::true_type is(const T<Targs...> &);
+	template<class T> std::false_type is(...);
+	template<template<class...>class T> std::false_type is(...);
+
+
+
 //	//Add exist argument to enabled
 //	template<bool enable, class T=bool, class Exist=void> struct enabled {};
 //	template<class T, class Exist> struct enabled<true, T, Exist> { typedef T type; };

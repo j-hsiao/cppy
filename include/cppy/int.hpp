@@ -1,8 +1,9 @@
 #ifndef CPPY_INT_HPP
 #define CPPY_INT_HPP
 
-#include "cppy/object.hpp"
-#include "cppy/mixin.hpp"
+#include <cppy/object.hpp>
+#include <cppy/mixin/checkthrow.hpp>
+#include <cppy/mixin/convertible.hpp>
 
 namespace cppy
 {
