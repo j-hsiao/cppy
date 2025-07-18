@@ -2,15 +2,12 @@
 #define CPPY_MIXIN_CHECKTHROW_HPP
 #include <cppy/errors.hpp>
 namespace cppy {
-	template<class T> struct Object;
-
 	//Mix in to add checkthrow methods.
 	//The Derived class should define a bool check() const
 	//method.
-	template<class T>
+	template<class Derived>
 	struct CheckThrow
 	{
-		using Derived = Object<T>;
 #		define CHECKTHROW(prefix, suffix) \
 		prefix Derived suffix checkthrow() prefix suffix { \
 			throwifnot(static_cast<prefix Derived suffix>(*this).check(), static_cast<prefix Derived suffix>(*this).name()); \

@@ -4,8 +4,9 @@
 #include <cppy/errors.hpp>
 #include <cppy/object.hpp>
 #include <cppy/int.hpp>
+#include <cppy/convert/int.hpp>
 #include <cppy/mixin/mapping.hpp>
-#include <cppy/util.hpp>
+#include <cppy/mixin/checkthrow.hpp>
 
 #include <utility>
 
@@ -13,10 +14,13 @@ namespace cppy
 {
 	struct Tuple_{};
 
-	template<> struct Object<Tuple_&>: CheckThrow<Tuple_&>, Mapping<Tuple_&,Object<>>, Borrowed
+	template<> struct Object<Tuple_&>:
+		CheckThrow<Object<Tuple_&>>,
+		Mapping<Object<Tuple_&>>,
+		Borrowed
 	{
 		using Borrowed::Borrowed;
-
+		using Mapping<Object<Tuple_&>>::operator[];
 
 		bool check() const { return PyTuple_Check(obj); }
 		static constexpr const char* name() { return "Tuple"; }
@@ -27,151 +31,114 @@ namespace cppy
 			return ret;
 		}
 
-		using Mapping<Tuple_&, Object<>>::getitem
 		// Tuples return a borrowed reference
-		Object<> getitem(Py_ssize_t pos) const
-		{ return Object<>(success(PyTuple_GetItem(obj, pos))); }
+		template<class Idx>
+		Object<> getitem(Idx &&idx) const
+		{ return Object<>(success(PyTuple_GetItem(obj, IntConverter<Object>{}(idx)))); }
 
-		//setitem, steals a reference.
-		void setitem(Py_ssize_t pos, PyObject *val)
-		{ if (PyTuple_SetItem(obj, pos, val) == -1) { throw PyError(); } }
-		//steal from a managed object.
-		template<class T>
-		void setitem(Py_ssize_t pos, Object<T,true> &&val)
+		//setitem, steal when non-const Owned.  Otherwise, incref.
+		template<class Idx, class Value>
+		void setitem(Idx &&idx, Value &&value)
 		{
-			if (PyTuple_SetItem(obj, pos, val.obj) == -1) { throw PyError(); }
-			else { val.obj = nullptr; }
+			IntConverter<Object> intcvt;
+			StealConverter<Object> stealcvt;
+			if (PyTuple_SetItem(obj, intcvt(idx), stealcvt(value)) == -1)
+			{ throw PyError(); }
 		}
-		//incref from any other Object<> instance type.
-		template<class T, bool b>
-		void setitem(Py_ssize_t pos, const Object<T,b> &val)
-		{
-			Py_INCREF(val.obj);
-			if (PyTuple_SetItem(obj, pos, val.obj) == -1) { throw PyError(); }
+
+		template<Py_ssize_t start=0, class First, class...Items>
+		void setitems(First &&first, Items&&...items) {
+			if (start + sizeof...(Items) + 1> size()) {
+				throw IndexError("Setting too many items to a tuple.");
+			}
+			setitems_(std::forward<First>(first), std::forward<Items>(items)...);
 		}
-		template<class T, bool b>
-		void setitem(Py_ssize_t pos, Object<T,b> &val)
-		{ setitem(pos, const_cast<const Object<T,b>&>(val)); }
-		//Generic convert into pyobject.
-		template<class T>
-		void setitem(Py_ssize_t pos, T &&t)
-		{ setitem(pos, Object<T,true>(std::forward<T>(t))); }
-
-		template<Py_ssize_t pos=0, class First, class...Items>
-		void setitems(First &&first, Items&&...items)
-		{
-			setitem(pos, Object<First, true>(first));
-			setitems<pos+1>(std::forward<Items>(items)...);
-		}
-		template<Py_ssize_t pos=0> void setitems() {}
-
-		// Represent an item at particular index of a tuple.
-		typedef ItemProxy<Object<Tuple_, false>, Py_ssize_t> TupleItem;
-
-		//Assign values to index
-		TupleItem operator[](Py_ssize_t pos) { return TupleItem(*this, pos); }
-		const TupleItem operator[](Py_ssize_t pos) const { return TupleItem(*this, pos); }
+		private:
+			template<Py_ssize_t pos=0, class First, class...Items>
+			void setitems_(First &&first, Items&&...items)
+			{
+				setitem(pos, std::forward<First>(first));
+				setitems<pos+1>(std::forward<Items>(items)...);
+			}
+			template<Py_ssize_t pos> void setitems_() {}
 	};
 
-	template<> struct Object<Tuple_, true>: Managed<Tuple_>, Make<Tuple_, true>
+	template<> struct Object<Tuple_>: Owned<Tuple_>
 	{
-		using Base = Make<Tuple_, true>;
-		using Base::Base;
+		using Owned<Tuple_>::Owned;
 
-		template<class...T, Py_ssize_t pos=0>
+		//setitem, steal when non-const Owned.  Otherwise, incref.
+		template<class...T>
 		Object(T&&...items):
-			Base(success(PyTuple_New(static_cast<Py_ssize_t>(sizeof...(T)))))
+			Owned<Tuple_>(success(PyTuple_New(static_cast<Py_ssize_t>(sizeof...(T)))))
 		{ setnewitems(std::forward<T>(items)...); }
 
 		private:
 			template<Py_ssize_t pos=0, class First, class...Items>
-			void setnewitems(First &&first, Items&&...items)
-			{
-				//It seems PyTuple_SET_ITEM is a macro so it thinks
-				//Object<First, true>... is 2 arguments must separate it out.
-				Object<First, true> tmp(std::forward<First>(first));
-				PyTuple_SET_ITEM(obj, pos, tmp.ret());
+			void setnewitems(First &&first, Items&&...items) {
+				StealConverter<Object> stealcvt;
+				PyTuple_SET_ITEM(obj, pos, stealcvt(std::forward<First>(first)));
 				setnewitems<pos+1>(std::forward<Items>(items)...);
-			}
-			template<Py_ssize_t pos=0, class First, class...Items>
-			void setnewitems(Object<First,true> &&first, Items&&...items)
-			{
-				PyTuple_SET_ITEM(obj, pos, first.ret());
-				setnewitems<pos+1>(std::forward<Items>(items)...);
-			}
-			template<Py_ssize_t pos=0, class First, bool b, class...Items>
-			void setnewitems(const Object<First,b> &first, Items&&...items)
-			{
-				Py_INCREF(first.obj);
-				PyTuple_SET_ITEM(obj, pos, first.obj);
-				setnewitems<pos+1>(std::forward<Items>(items)...);
-			}
-			template<Py_ssize_t pos=0, class First, bool b, class...Items>
-			void setnewitems(Object<First,b> &first, Items&&...items)
-			{
-				setnewitems(
-					const_cast<const Object<First,b>&>(first),
-					std::forward<Items>(items)...);
 			}
 			template<Py_ssize_t pos=0> void setnewitems() {}
 	};
 
 
-	// ------------------------------
-	// Call a C++ functor by converting arguments from a python tuple.
-	// ------------------------------
-	//TODO: is_callable to call with default arguments.
-	template<
-		int offset=0, class Callable, class...Args,
-		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
-	>
-	typename function_signature<Callable>::return_type callcpp(
-		Callable &&callable, const Tuple<> &args, Args&&...converted)
-	{
-		return callcpp(
-			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
-			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)+offset]()).checkthrow()
-		);
-	}
+	//// ------------------------------
+	//// Call a C++ functor by converting arguments from a python tuple.
+	//// ------------------------------
+	////TODO: is_callable to call with default arguments.
+	//template<
+	//	int offset=0, class Callable, class...Args,
+	//	typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
+	//>
+	//typename function_signature<Callable>::return_type callcpp(
+	//	Callable &&callable, const Tuple<> &args, Args&&...converted)
+	//{
+	//	return callcpp(
+	//		std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
+	//		Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)+offset]()).checkthrow()
+	//	);
+	//}
 
-	template<
-		class Callable, class...Args,
-		typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
-	>
-	typename function_signature<Callable>::return_type callcpp(
-		Callable &&callable, PyObject *self, const Tuple<> &args)
-	{
-		return callcpp<-1>(
-			std::forward<Callable>(callable), args,
-			Object<typename function_signature<Callable>::arguments_type::get<0>::type>(self).checkthrow()
-		);
-	}
+	//template<
+	//	class Callable, class...Args,
+	//	typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
+	//>
+	//typename function_signature<Callable>::return_type callcpp(
+	//	Callable &&callable, PyObject *self, const Tuple<> &args)
+	//{
+	//	return callcpp<-1>(
+	//		std::forward<Callable>(callable), args,
+	//		Object<typename function_signature<Callable>::arguments_type::get<0>::type>(self).checkthrow()
+	//	);
+	//}
 
-	template<
-		class Callable, class...Args,
-		typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::count>::type = true
-	>
-	typename function_signature<Callable>::return_type callcpp(
-		Callable &&callable, const Tuple<> &args, Args&&...converted)
-	{
-		return callable(std::forward<Args>(converted)...);
-	}
+	//template<
+	//	class Callable, class...Args,
+	//	typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::count>::type = true
+	//>
+	//typename function_signature<Callable>::return_type callcpp(
+	//	Callable &&callable, const Tuple<> &args, Args&&...converted)
+	//{
+	//	return callable(std::forward<Args>(converted)...);
+	//}
 
-	struct CPPCaller {
-		template<class T, class...Args>
-		auto operator()(T&&t, Args&&...args) const
-			-> decltype(callcpp(std::forward<T>(t), std::forward<Args>(args)...))
-		{
-			return callcpp(std::forward<T>(t), std::forward<Args>(args)...);
-		}
-	};
+	//struct CPPCaller {
+	//	template<class T, class...Args>
+	//	auto operator()(T&&t, Args&&...args) const
+	//		-> decltype(callcpp(std::forward<T>(t), std::forward<Args>(args)...))
+	//	{
+	//		return callcpp(std::forward<T>(t), std::forward<Args>(args)...);
+	//	}
+	//};
 
-	// ------------------------------
-	// call python callable using c++ arguments.
-	// ------------------------------
-	template<class...Args>
-	PyObject* callpy(PyObject *callable, Args&&...args)
-	{ return success(PyObject_Call(callable, Tuple<true>(std::forward<Args>(args)...).obj, NULL)); }
+	//// ------------------------------
+	//// call python callable using c++ arguments.
+	//// ------------------------------
+	//template<class...Args>
+	//PyObject* callpy(PyObject *callable, Args&&...args)
+	//{ return success(PyObject_Call(callable, Tuple<true>(std::forward<Args>(args)...).obj, NULL)); }
 
 
 }

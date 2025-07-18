@@ -1,8 +1,7 @@
 #include <cppy/object.hpp>
 #include <cppy/int.hpp>
 #include <cppy/string.hpp>
-//#include <cppy/tuple.hpp>
-//#include <cppy/tuple.hpp>
+#include <cppy/tuple.hpp>
 //#include <cppy/float.hpp>
 //#include <cppy/method.hpp>
 //#include <cppy/util.hpp>
@@ -44,8 +43,30 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 		std::cout << "indexing non-const generic borrowed reference." << std::endl;
 		cppy::Object<> args(args_);
 		for (int i=0; i<args.size(); ++i)
-		{
-			std::cout << "    " << i << ": " << args[i]->str() << std::endl;
+		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
+	}
+
+	{
+		std::cout << "------------------------------" << std::endl;
+		std::cout << "using a borrowed Tuple" << std::endl;
+		cppy::Object<cppy::Tuple_&> args(args_);
+		for (int i=0; i<args.size(); ++i)
+		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
+	}
+
+	{
+		cppy::Object<cppy::Tuple_&> args(args_);
+		if (args.size() >= 3) {
+			cppy::Object<cppy::Tuple_> tmp(
+				args[0]->obj,
+				args[1]->obj,
+				args[2]->obj
+			);
+			std::cout << tmp.str() << std::endl;
+		}
+		else {
+			cppy::Object<cppy::Tuple_> tmp(1, 2, 3);
+			std::cout << tmp.str() << std::endl;
 		}
 	}
 

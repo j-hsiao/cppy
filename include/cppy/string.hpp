@@ -13,7 +13,9 @@
 
 namespace cppy
 {
-	template<> struct Object<const char*&>: CheckThrow<const char*&>, Borrowed
+	template<> struct Object<const char*&>:
+		CheckThrow<Object<const char*&>>,
+		Borrowed
 	{
 		using Borrowed::Borrowed;
 

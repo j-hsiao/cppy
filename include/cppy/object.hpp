@@ -32,9 +32,7 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&>:
-		Mapping<Object<>, PyObjectConverter<Object>, PyObjectConverter<Object>>
-	{
+	template<> struct Object<PyObject&>: Mapping<Object<>> {
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}

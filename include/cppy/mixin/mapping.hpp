@@ -48,7 +48,7 @@ namespace cppy {
 	template<class T> struct Object;
 
 	//Implement operator[]
-	template<class Derived, class Key, class Value>
+	template<class Derived>
 	struct Mapping {
 		// operator[] gives a proxy to support syntax:
 		// auto value = mapping[key];

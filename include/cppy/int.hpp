@@ -53,7 +53,11 @@ namespace cppy
 		static constexpr void* badc() { return NULL; }
 	};
 
-	template<> struct Object<int&>: Borrowed, CheckThrow<int&>, Convertible<int&, IntConvert> {
+	template<> struct Object<int&>:
+		CheckThrow<Object<int&>>,
+		Convertible<Object<int&>, IntConvert>,
+		Borrowed
+	{
 		using Borrowed::Borrowed;
 
 		bool check() const { return PyLong_Check(this->obj); }

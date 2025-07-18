@@ -4,9 +4,12 @@
 #include <utility>
 namespace cppy
 {
+	//is a struct
 	template<class T> std::true_type is(const T &);
-	template<template<class...>class T, class...Targs> std::true_type is(const T<Targs...> &);
 	template<class T> std::false_type is(...);
+
+	//is a template
+	template<template<class...>class T, class...Targs> std::true_type is(const T<Targs...> &);
 	template<template<class...>class T> std::false_type is(...);
 
 

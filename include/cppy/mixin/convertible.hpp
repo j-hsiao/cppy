@@ -4,8 +4,6 @@
 #include <cppy/errors.hpp>
 namespace cppy
 {
-	template<class T> struct Object;
-
 	// Mixin for derived objects that can be converted to some c type.
 	// struct Converter<T>:
 	// {
@@ -15,11 +13,9 @@ namespace cppy
 	// toc converts PyObject* to a T type.  If the result == bad,
 	// then check PyErr_Occurred to see if it was really a bad
 	// conversion.
-	template<class T, template<class> class Converter>
+	template<class Derived, template<class> class Converter>
 	struct Convertible
 	{
-		using Derived = Object<T>;
-
 		template<class O>
 		O to() const {
 			typedef Converter<O> conv;
