@@ -81,9 +81,14 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	{
 		cppy::List lst("hello", 72);
 
-		std::cout << lst.str() << std::endl;
+		if (lst.str().string() != "['hello', 72]") { Py_RETURN_FALSE; }
+		if (lst.tuple().str().string() != "('hello', 72)") { Py_RETURN_FALSE; }
+		lst.extend(lst.tuple());
+		if (lst.str().string() != "['hello', 72, 'hello', 72]") { Py_RETURN_FALSE; }
+		lst.clear();
+		if (lst.str().string() != "[]") { Py_RETURN_FALSE; }
 	}
-	Py_RETURN_NONE;
+	Py_RETURN_TRUE;
 }
 
 //PyObject* tupassign_test(PyObject *m, PyObject *args_)

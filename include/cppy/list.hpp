@@ -5,6 +5,7 @@
 #include <cppy/mixin/mapping.hpp>
 #include <cppy/mixin/sized.hpp>
 #include <cppy/convert/int.hpp>
+#include <cppy/tuple.hpp>
 
 namespace cppy {
 	struct List_{};
@@ -46,6 +47,30 @@ namespace cppy {
 			}
 			setitems_(std::forward<First>(first), std::forward<Items>(items)...);
 		}
+
+		Tuple tuple() const { return Tuple(success(PyList_AsTuple(obj))); }
+
+		Object<List_&>& sort() {
+			if (PyList_Sort(obj) == -1) { throw PyError{}; }
+			return *this;
+		}
+
+		Object<List_&>& reverse() {
+			if (PyList_Reverse(obj) == -1) { throw PyError{}; }
+			return *this;
+		}
+
+		Object<List_&>& clear() { return set_slice(0, PY_SSIZE_T_MAX, nullptr); }
+		Object<List_&>& extend(PyObject *seq) { return set_slice(PY_SSIZE_T_MAX, PY_SSIZE_T_MAX, seq); }
+		Object<List_&>& extend(const Object<> &seq) { return extend(seq.obj); }
+
+		Object<List_&>& set_slice(Py_ssize_t low, Py_ssize_t high, PyObject *itemseq) {
+			if (PyList_SetSlice(obj, low, high, itemseq) == -1) { throw PyError{}; }
+			return *this;
+		}
+		Object<List_&>& set_slice(Py_ssize_t low, Py_ssize_t high, const Object<> &itemseq)
+		{ return set_slice(low, high, itemseq.obj); }
+
 		private:
 			template<Py_ssize_t pos=0, class First, class...Items>
 			void setitems_(First &&first, Items&&...items)
