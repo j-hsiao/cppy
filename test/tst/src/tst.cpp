@@ -70,8 +70,12 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 		}
 	}
 
-
-
+	{
+		cppy::Object<cppy::Tuple_&> args(args_);
+		if (args.check()) {
+			std::cout << args.slice(1,args.size_()).str() << std::endl;
+		}
+	}
 	Py_RETURN_NONE;
 }
 

@@ -30,6 +30,10 @@ namespace cppy
 			if (ret == -1) { throw PyError(); }
 			return ret;
 		}
+		//no error checking.
+		Py_ssize_t size_() const { return PyTuple_GET_SIZE(obj); }
+
+		Object<Tuple_> slice(Py_ssize_t start, Py_ssize_t stop) const;
 
 		// Tuples return a borrowed reference
 		template<class Idx>
@@ -67,6 +71,7 @@ namespace cppy
 	{
 		using Owned<Tuple_>::Owned;
 
+		//NOTE: PyTuple_Pack exists, but it seems to incref everything, does not steal.
 		//setitem, steal when non-const Owned.  Otherwise, incref.
 		template<class...T>
 		Object(T&&...items):
@@ -82,6 +87,9 @@ namespace cppy
 			}
 			template<Py_ssize_t pos=0> void setnewitems() {}
 	};
+
+	inline Object<Tuple_> Object<Tuple_&>::slice(Py_ssize_t start, Py_ssize_t stop) const
+	{ return Object<Tuple_>(success(PyTuple_GetSlice(obj, start, stop))); }
 
 
 	//// ------------------------------
