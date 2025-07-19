@@ -3,10 +3,10 @@
 
 #include <cppy/errors.hpp>
 #include <cppy/object.hpp>
-#include <cppy/int.hpp>
-#include <cppy/convert/int.hpp>
 #include <cppy/mixin/mapping.hpp>
 #include <cppy/mixin/checkthrow.hpp>
+#include <cppy/mixin/sized.hpp>
+#include <cppy/convert/int.hpp>
 
 #include <utility>
 
@@ -17,19 +17,16 @@ namespace cppy
 	template<> struct Object<Tuple_&>:
 		CheckThrow<Object<Tuple_&>>,
 		Mapping<Object<Tuple_&>>,
+		Sized<Object<Tuple_&>, PyTuple_Size>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
 		using Mapping<Object<Tuple_&>>::operator[];
+		using Sized<Object<Tuple_&>, PyTuple_Size>::size;
 
 		bool check() const { return PyTuple_Check(obj); }
 		static constexpr const char* name() { return "Tuple"; }
 
-		Py_ssize_t size() const {
-			Py_ssize_t ret = PyTuple_Size(obj);
-			if (ret == -1) { throw PyError(); }
-			return ret;
-		}
 		//no error checking.
 		Py_ssize_t size_() const { return PyTuple_GET_SIZE(obj); }
 
@@ -90,6 +87,9 @@ namespace cppy
 
 	inline Object<Tuple_> Object<Tuple_&>::slice(Py_ssize_t start, Py_ssize_t stop) const
 	{ return Object<Tuple_>(success(PyTuple_GetSlice(obj, start, stop))); }
+
+	struct Tuple: Object<Tuple_> { using Object<Tuple_>::Object; };
+	struct TupleRef: Object<Tuple_&> { using Object<Tuple_&>::Object; };
 
 
 	//// ------------------------------

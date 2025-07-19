@@ -17,6 +17,7 @@
 
 #include <cppy/errors.hpp>
 #include <cppy/mixin/mapping.hpp>
+#include <cppy/mixin/sized.hpp>
 #include <cppy/convert/pyobject.hpp>
 
 #include <cstddef>
@@ -32,7 +33,10 @@ namespace cppy
 	//------------------------------
 	template<class T=PyObject&> struct Object;
 
-	template<> struct Object<PyObject&>: Mapping<Object<>> {
+	template<> struct Object<PyObject&>:
+		Mapping<Object<>>,
+		Sized<Object<>, PyObject_Size>
+	{
 		PyObject *obj;
 
 		Object() noexcept: obj(nullptr) {}
@@ -70,12 +74,6 @@ namespace cppy
 			{ throw PyError(); }
 		}
 
-		//__len__
-		Py_ssize_t size() const {
-			auto ret = PyObject_Size(obj);
-			if (ret < 0) { throw PyError(); }
-			return ret;
-		}
 		operator bool() const {
 			int result = PyObject_IsTrue(obj);
 			if (result < 0) { throw PyError(); }
