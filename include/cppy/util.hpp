@@ -8,6 +8,22 @@ namespace cppy
 	template<class T> std::true_type is(const T &);
 	template<class T> std::false_type is(...);
 
+	template<class T, class Actual> struct cvrefmatch { typedef T type; };
+	template<class T, class Actual> struct cvrefmatch<T, Actual&> { typedef T& type; };
+	template<class T, class Actual> struct cvrefmatch<T, Actual&&> { typedef T&& type; };
+	template<class T, class Actual> struct cvrefmatch<T, const Actual> { typedef const T type; };
+	template<class T, class Actual> struct cvrefmatch<T, const Actual&> { typedef const T& type; };
+	template<class T, class Actual> struct cvrefmatch<T, const Actual&&> { typedef const T&& type; };
+	template<class T, class Actual> struct cvrefmatch<T, volatile Actual> { typedef volatile T type; };
+	template<class T, class Actual> struct cvrefmatch<T, volatile Actual&> { typedef volatile T& type; };
+	template<class T, class Actual> struct cvrefmatch<T, volatile Actual&&> { typedef volatile T&& type; };
+
+	template<class T, class Actual>
+	typename std::conditional<
+		is<T>(std::declval<Actual&&>()),
+		typename cvrefmatch<T, Actual&&>::type,
+		Actual&&>::type as(Actual &&actual) { return std::forward<Actual>(actual); }
+
 	//is a template
 	template<template<class...>class T, class...Targs> std::true_type is(const T<Targs...> &);
 	template<template<class...>class T> std::false_type is(...);

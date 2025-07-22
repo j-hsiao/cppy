@@ -12,8 +12,8 @@
 PyObject* basic_test(PyObject *m, PyObject *args_)
 {
 	{
-		std::cout << "------------------------------" << std::endl;
-		std::cout << "Running basic test as generic borrowed reference object." << std::endl;
+		std::cout << "------------------------------" << std::endl
+		          << "Running basic test as generic borrowed reference object." << std::endl;
 		cppy::Object<> args(args_);
 		std::cout << "  size: " << args.size() << std::endl;
 		std::cout << "  str : " << args.str() << std::endl;
@@ -21,8 +21,8 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	}
 
 	{
-		std::cout << "------------------------------" << std::endl;
-		std::cout << "Running basic test as generic owned reference object." << std::endl;
+		std::cout << "------------------------------" << std::endl
+		          << "Running basic test as generic owned reference object." << std::endl;
 		cppy::Object<> borrowed(args_);
 		cppy::Object<PyObject> owned(borrowed);
 		std::cout << "  size: " << owned.size() << std::endl;
@@ -31,8 +31,8 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	}
 
 	{
-		std::cout << "------------------------------" << std::endl;
-		std::cout << "indexing const generic borrowed reference." << std::endl;
+		std::cout << "------------------------------" << std::endl
+		          << "indexing const generic borrowed reference." << std::endl;
 		const cppy::Object<> args(args_);
 		for (int i=0; i<args.size(); ++i)
 		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
@@ -40,22 +40,24 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 
 
 	{
-		std::cout << "------------------------------" << std::endl;
-		std::cout << "indexing non-const generic borrowed reference." << std::endl;
+		std::cout << "------------------------------" << std::endl
+		          << "indexing non-const generic borrowed reference." << std::endl;
 		cppy::Object<> args(args_);
 		for (int i=0; i<args.size(); ++i)
 		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
 	}
 
 	{
-		std::cout << "------------------------------" << std::endl;
-		std::cout << "using a borrowed Tuple" << std::endl;
+		std::cout << "------------------------------" << std::endl
+		          << "using a borrowed Tuple" << std::endl;
 		cppy::TupleRef args(args_);
 		for (int i=0; i<args.size(); ++i)
 		{ std::cout << "    " << i << ": " << args[i]->str() << std::endl; }
 	}
 
 	{
+		std::cout << "------------------------------" << std::endl
+		          << "testing tuple creation" << std::endl;
 		cppy::TupleRef args(args_);
 		if (args.size() >= 3) {
 			cppy::Tuple tmp(
@@ -72,6 +74,8 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	}
 
 	{
+		std::cout << "------------------------------" << std::endl
+		          << "tuple size_+slice" << std::endl;
 		cppy::TupleRef args(args_);
 		if (args.check()) {
 			std::cout << args.slice(1,args.size_()).str() << std::endl;
@@ -79,14 +83,29 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 	}
 
 	{
+		std::cout << "------------------------------" << std::endl
+		          << "list creation" << std::endl;
+		std::cout << "list" << std::endl;
 		cppy::List lst("hello", 72);
-
 		if (lst.str().string() != "['hello', 72]") { Py_RETURN_FALSE; }
+		std::cout << "------------------------------" << std::endl
+		          << "list to tuple" << std::endl;
 		if (lst.tuple().str().string() != "('hello', 72)") { Py_RETURN_FALSE; }
+		std::cout << "------------------------------" << std::endl
+		          << "extend" << std::endl;
 		lst.extend(lst.tuple());
 		if (lst.str().string() != "['hello', 72, 'hello', 72]") { Py_RETURN_FALSE; }
+		std::cout << "------------------------------" << std::endl
+		          << "clear" << std::endl;
 		lst.clear();
 		if (lst.str().string() != "[]") { Py_RETURN_FALSE; }
+
+		std::cout << "------------------------------" << std::endl
+		          << "append" << std::endl;
+		lst.append(32);
+		if (lst.str().string() != "[32]") { Py_RETURN_FALSE; }
+		lst.append(lst);
+		if (lst.str().string() != "[32, [...]]") { Py_RETURN_FALSE; }
 	}
 	Py_RETURN_TRUE;
 }

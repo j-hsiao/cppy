@@ -10,7 +10,7 @@
 namespace cppy {
 	template<class T>
 	struct ObjectWrap {
-		Object<T> keepalive;
+		T keepalive;
 		operator PyObject*() const { return keepalive.obj; }
 	};
 
@@ -22,11 +22,11 @@ namespace cppy {
 
 		template<class T> PyObject* operator()(const Object<T> &o) const { return o.obj; }
 		template<class T> PyObject* operator()(Object<T> &o) const { return o.obj; }
-		template<class T> ObjectWrap<T> operator()(Object<T> &&o) const { return std::move(o); }
-		template<class T> ObjectWrap<T> operator()(const Object<T> &&o) const { return std::move(o); }
+		template<class T> ObjectWrap<Object<T>> operator()(Object<T> &&o) const { return std::move(o); }
+		template<class T> ObjectWrap<Object<T>> operator()(const Object<T> &&o) const { return std::move(o); }
 
-		template<class T> ObjectWrap<typename std::decay<T>::type> operator()(T &&t) const
-		{ return ObjectWrap<typename std::decay<T>::type>{std::forward<T>(t)}; }
+		template<class T> ObjectWrap<Object<typename std::decay<T>::type>> operator()(T &&t) const
+		{ return ObjectWrap<Object<typename std::decay<T>::type>>{std::forward<T>(t)}; }
 	};
 
 	//Steals reference from input.
@@ -39,33 +39,32 @@ namespace cppy {
 		}
 
 		template<class T> PyObject* operator()(T &&t) const
-		{ return Converter<typename std::decay<T&&>::type>{}(std::forward<T>(t)); }
+		{ return Converter<decltype(is<Object>(std::forward<T>(t)))>{}(std::forward<T>(t)); }
 
 		private:
 			//If Borrowed, then must incref
 			//If const owned, then must incref
 			//If non-const owned, then steal whether rvalue or lvalue
 
-			template<class T>
-			struct Converter {
+			template<class IsObject, int dummy=0> struct Converter;
+
+			template<int dummy>
+			struct Converter<std::false_type, dummy> {
 				//Generic object, use Object to convert to PyObject*
-				template<class V>
-				PyObject* operator()(V &&v) const { return Object<T>(std::forward<V>(v)).ret(); }
+				template<class T> PyObject* operator()(T &&t) const
+				{ return Object<typename std::decay<T&&>::type>(std::forward<T>(t)).ret(); }
 			};
 
-			template<class T>
-			struct Converter<Object<T>> {
-				PyObject* operator()(const Object<T&> &owned) const {
+			template<int dummy>
+			struct Converter<std::true_type, dummy> {
+				template<class T>
+				PyObject* operator()(const Object<T> &owned) const {
 					Py_INCREF(owned.obj);
 					return owned.obj;
 				}
-				PyObject* operator()(Object<T&> &owned) const { return owned.obj; }
-				PyObject* operator()(Object<T&> &&owned) const { return owned.obj; }
-			};
+				template<class T> PyObject* operator()(Object<T> &&owned) const { return owned.ret(); }
 
-			template<class T>
-			struct Converter<Object<T&>> {
-				PyObject* operator()(const Object<T&> &borrowed) const {
+				template<class T> PyObject* operator()(const Object<T&> &borrowed) const {
 					Py_INCREF(borrowed.obj);
 					return borrowed.obj;
 				}

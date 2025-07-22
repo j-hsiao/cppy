@@ -27,17 +27,41 @@ namespace cppy {
 
 		Object<List_> slice(Py_ssize_t start, Py_ssize_t stop) const;
 
+		//TODO? PyList_GET_ITEM?
+		//no error checking
 		template<class Idx>
 		Object<> getitem(Idx &&idx) const
-		{ return Object<>(success(PyList_GetItem(obj, IntConverter<Object>{}(idx)))); }
+		{ return Object<>(success(PyList_GetItem(obj, IntConverter<Object>{}(std::forward<Idx>(idx))))); }
 
+		//TODO PyList_SET_ITEM?
+		//steal reference, existing items not decrefed no error checking, is macro
 		template<class Idx, class Value>
-		void setitem(Idx &&idx, Value &&value)
+		Object<List_&>& setitem(Idx &&idx, Value &&value)
 		{
 			IntConverter<Object> intcvt;
 			StealConverter<Object> stealcvt;
-			if (PyList_SetItem(obj, intcvt(idx), stealcvt(value)) == -1)
+			if (PyList_SetItem(obj, intcvt(std::forward<Idx>(idx)), stealcvt(std::forward<Value>(value))) == -1)
 			{ throw PyError(); }
+			return *this;
+		}
+
+		template<class Idx, class Value>
+		Object<List_&>& insert(Idx &&idx, Value &&value) {
+			IntConverter<Object> intcvt;
+			//docs don't say steal or dup
+			StealConverter<Object> stealcvt;
+			if (PyList_Insert(obj, intcvt(std::forward<Idx>(idx)), stealcvt(std::forward<Value>(value))) == -1)
+			{ throw PyError(); }
+			return *this;
+		}
+
+		template<class Value>
+		Object<List_&>& append(Value &&value) {
+			//docs don't say steal or dup
+			StealConverter<Object> stealcvt;
+			if (PyList_Append(obj, stealcvt(std::forward<Value>(value))) == -1)
+			{ throw PyError(); }
+			return *this;
 		}
 
 		template<Py_ssize_t start=0, class First, class...Items>
