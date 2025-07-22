@@ -100,12 +100,16 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 		lst.clear();
 		if (lst.str().string() != "[]") { Py_RETURN_FALSE; }
 
+	}
+	{
+		cppy::TupleRef args(args_);
 		std::cout << "------------------------------" << std::endl
 		          << "append" << std::endl;
-		lst.append(32);
-		if (lst.str().string() != "[32]") { Py_RETURN_FALSE; }
-		lst.append(lst);
-		if (lst.str().string() != "[32, [...]]") { Py_RETURN_FALSE; }
+		cppy::List lst;
+		if (lst.size() != 0) { Py_RETURN_FALSE; }
+		std::cout << "before append." << std::endl;
+		lst.append(args.getitem(0));
+		lst.insert(0, args.getitem(0));
 	}
 	Py_RETURN_TRUE;
 }

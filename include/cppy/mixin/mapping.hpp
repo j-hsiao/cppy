@@ -10,6 +10,9 @@ namespace cppy {
 	struct ArrowWrap {
 		T item;
 		T* operator->() { return &item; }
+
+		T& operator*() { return item; }
+		const T& operator*() const { return item; }
 	};
 
 	//Item proxy to allow get/assign via operator[]
@@ -32,6 +35,7 @@ namespace cppy {
 		typedef decltype(obj.getitem(key)) Value;
 		ArrowWrap<Value> operator->() const { return { obj.getitem(key) }; }
 		operator Value() const { return obj.getitem(key); }
+		Value operator*() const { return obj.getitem(key); }
 
 		template<class V>
 		ItemProxy& operator=(V &&value) {

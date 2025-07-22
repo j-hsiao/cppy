@@ -3,10 +3,10 @@ from tst import testmodule
 import sys
 errored = False
 
-tup = ([slice(10,30)],(3.14, 101), "hello")
-counts1 = [sys.getrefcount(thing) for thing in tup]
+tup = ([slice(10,30)],(3.14, 101), "hello", None)
 tupcount1 = sys.getrefcount(tup)
 print('arguments:', tup)
+counts1 = [sys.getrefcount(thing) for thing in tup]
 errored = not testmodule.basic_test(*tup)
 counts2 = [sys.getrefcount(thing) for thing in tup]
 if counts1 != counts2:

@@ -33,8 +33,8 @@ namespace cppy {
 		Object<> getitem(Idx &&idx) const
 		{ return Object<>(success(PyList_GetItem(obj, IntConverter<Object>{}(std::forward<Idx>(idx))))); }
 
-		//TODO PyList_SET_ITEM?
-		//steal reference, existing items not decrefed no error checking, is macro
+		//TODO PyList_SET_ITEM?:  steal reference, existing items not decrefed no error checking, is macro
+		//setitem steals reference.
 		template<class Idx, class Value>
 		Object<List_&>& setitem(Idx &&idx, Value &&value)
 		{
@@ -45,21 +45,21 @@ namespace cppy {
 			return *this;
 		}
 
+		//insert does not steal
 		template<class Idx, class Value>
 		Object<List_&>& insert(Idx &&idx, Value &&value) {
 			IntConverter<Object> intcvt;
-			//docs don't say steal or dup
-			StealConverter<Object> stealcvt;
-			if (PyList_Insert(obj, intcvt(std::forward<Idx>(idx)), stealcvt(std::forward<Value>(value))) == -1)
+			PyObjectConverter<Object> objcvt;
+			if (PyList_Insert(obj, intcvt(std::forward<Idx>(idx)), objcvt(std::forward<Value>(value))) == -1)
 			{ throw PyError(); }
 			return *this;
 		}
 
+		//append does not steal
 		template<class Value>
 		Object<List_&>& append(Value &&value) {
-			//docs don't say steal or dup
-			StealConverter<Object> stealcvt;
-			if (PyList_Append(obj, stealcvt(std::forward<Value>(value))) == -1)
+			PyObjectConverter<Object> cvt;
+			if (PyList_Append(obj, cvt(std::forward<Value>(value))) == -1)
 			{ throw PyError(); }
 			return *this;
 		}
@@ -108,6 +108,8 @@ namespace cppy {
 	template<> struct Object<List_>: Owned<List_>
 	{
 		using Owned<List_>::Owned;
+
+		Object(): Owned<List_>(success(PyList_New(0))) {}
 
 		//NOTE: PyList_Pack exists, but it seems to incref everything, does not steal.
 		//setitem, steal when non-const Owned.  Otherwise, incref.
