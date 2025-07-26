@@ -73,6 +73,10 @@ int main(int argc, char *argv[]) {
 			CHECK(decltype(cppy::is<ta>(binst))::value)
 			CHECK(decltype(cppy::is<ta>(cbinst))::value)
 
+			CHECK(decltype(cppy::is<ta<>>(tb{}))::value)
+			CHECK(decltype(cppy::is<ta<>>(binst))::value)
+			CHECK(decltype(cppy::is<ta<>>(cbinst))::value)
+
 			CHECK(!decltype(cppy::is<ta>(c{}))::value)
 			CHECK(!decltype(cppy::is<ta>(cinst))::value)
 			CHECK(!decltype(cppy::is<ta>(ccinst))::value)
