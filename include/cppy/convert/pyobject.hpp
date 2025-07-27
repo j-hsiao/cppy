@@ -59,13 +59,8 @@ namespace cppy {
 		PyObject* operator()(PyObject* p) const { return p; }
 
 		template<class T>
-		is<Object>(std::declval<T&&>())
-
-
-		/*TODO*/ operator()(T &&t) const
-		{
-			return Converter<decltype(is<Object>(std::forward<T>(t)))>{}(std::forward<T>(t));
-		}
+		decltype(typename Converter<T&&>::type{}(std::declval<T&&>())) operator()(T &&t) const
+		{ return Converter<T&&>{}(std::forward<T>(t)); }
 	};
 
 	//Steals reference from input.
