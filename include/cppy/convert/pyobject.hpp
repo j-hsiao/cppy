@@ -9,7 +9,7 @@
 #include <utility>
 #include <iostream>
 namespace cppy {
-	//keep PyObject* alive until used.
+	//keep PyObject* alive (Owned Object rvalue ref, prevent the decref)
 	template<class T>
 	struct ObjectWrap {
 		T keepalive;
@@ -19,41 +19,53 @@ namespace cppy {
 	template<template<class> class Object>
 	struct PyObjectConverter {
 		private:
-			template<class IsObject, int dummy=0> struct Converter {
+			//generic
+			struct ConvertGeneric {
+				template<class Actual>
+				ObjectWrap<Object<typename std::decay<Actual>::type>> operator()(Actual &&a) const
+				{ return {std::forward<Actual>(a)}; }
+			};
+			//owned
+			struct ConvertOwned {
 				template<class T>
-				decltype(Converter<decltype(is<Object>(*std::declval<T&&>()))>{}(std::declval<T&&>()))
-				ObjectWrap<Object<typename std::decay<T>::type>> operator()(T &&t) const
-				{ return Converter<decltype(is<Object>(*std::declval<T&&>()))>{}(std::forward<T>(t)); }
+				ObjectWrap<Object<T>> operator()(Object<T> &&o) const { return {std::move(o)}; }
 
-				template<class StarOpIsObject, int dummy=0>
-				struct Converter {
-					template<class T>
-					ObjectWrap<Object<typename std::decay<T>::type>> operator()(T &&t) const
-					{ return ObjectWrap<Object<typename std::decay<T>::type>>{std::forward<T>(t)}; }
-				};
-
-				template<int dummy> struct Converter<std::true_type, dummy> {
-					template<class T>
-					ObjectWrap<decltype(*declval<T&&>())> operator()(T &&t) const
-					{ return ObjectWrap<decltype(*declval<T&&>())>{*t}; }
-				};
+				template<class T>
+				PyObject* operator()(const Object<T> &o) const { return o.obj; }
+			};
+			//borrowed
+			struct ConvertBorrowed {
+				template<class Actual>
+				PyObject* operator()(Actual &&a) const { return a.obj; }
 			};
 
-			template<int dummy> struct Converter<std::true_type, dummy> {
-				template<class T> PyObject* operator()(const Object<T&> &o) const { return o.obj; }
-
-				template<class T> PyObject* operator()(Object<T&> &&o) const { return o.obj; }
-				template<class T>
-				ObjectWrap<Object<T>> operator()(Object<T> &&o) const { return ObjectWrap<Object<T>>{std::move(o)}; }
+			template<class Actual>
+			struct Converter {
+				using type = typename std::conditional<
+					decltype(is<Object>(std::declval<Actual&&>()))::value,
+					typename std::conditional<
+						decltype(owned<Object>(std::declval<Actual&&>()))::value,
+						ConvertOwned,
+						ConvertBorrowed
+						>::type,
+					typename std::conditional<
+						decltype(star_is<Object>(std::declval<Actual&&>()))::value,
+						typename Converter<decltype(*istd::declval<Actual&&>())>::type,
+						ConvertGeneric
+						>::type
+				>::type
 			};
-
 		public:
 		PyObject* operator()(PyObject* p) const { return p; }
 
 		template<class T>
-		decltype(Converter<decltype(is<Object>(std::declval<T&&>()))>{}(std::declval<T&&>()))
-		operator()(T &&t) const
-		{ return Converter<decltype(is<Object>(std::forward<T>(t)))>{}(std::forward<T>(t)); }
+		is<Object>(std::declval<T&&>())
+
+
+		/*TODO*/ operator()(T &&t) const
+		{
+			return Converter<decltype(is<Object>(std::forward<T>(t)))>{}(std::forward<T>(t));
+		}
 	};
 
 	//Steals reference from input.

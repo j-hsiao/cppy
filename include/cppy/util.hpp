@@ -1,5 +1,4 @@
-#ifndef CPPY_UTIL_HPP
-#define CPPY_UTIL_HPP
+#ifndef CPPY_UTIL_HPP define CPPY_UTIL_HPP
 #include <type_traits>
 #include <utility>
 namespace cppy
@@ -19,6 +18,11 @@ namespace cppy
 	template<template<class...>class T, class...Targs> std::true_type star_is(const T<Targs...> &);
 	template<template<class...>class T> std::false_type star_is(...);
 
+	template<template<class>class Object, class T>
+	typename std::conditional<std::is_reference<T>::value, std::false_type, std::true_type>::type
+	owned(const Object<T> &thing);
+	template<template<class>class Object>
+	std::false_type owned(...);
 
 	template<class T, class Actual> struct cvrefmatch { typedef T type; };
 	template<class T, class Actual> struct cvrefmatch<T, Actual&> { typedef T& type; };
@@ -37,9 +41,6 @@ namespace cppy
 		decltype(is<T>(std::declval<Actual&&>()))::value,
 		typename cvrefmatch<T, Actual&&>::type,
 		Actual&&>::type as(Actual &&actual) { return std::forward<Actual>(actual); }
-
-
-
 
 //	//Add exist argument to enabled
 //	template<bool enable, class T=bool, class Exist=void> struct enabled {};
