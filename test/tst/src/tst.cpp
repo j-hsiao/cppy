@@ -133,6 +133,12 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 
 		lst.append(args[0]);
 		lst.insert(0, args[0]);
+
+		lst.append(0);
+		if (lst[lst[lst.size()-1]]->obj != args[0]->obj) {
+			std::cout << "lst[lst[-1]] != lst[0]" << std::endl;
+			Py_RETURN_FALSE;
+		}
 	}
 	Py_RETURN_TRUE;
 }
