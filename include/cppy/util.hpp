@@ -1,4 +1,5 @@
-#ifndef CPPY_UTIL_HPP define CPPY_UTIL_HPP
+#ifndef CPPY_UTIL_HPP
+#define CPPY_UTIL_HPP
 #include <type_traits>
 #include <utility>
 namespace cppy
@@ -10,12 +11,19 @@ namespace cppy
 	template<template<class...>class T, class...Targs> std::true_type is(const T<Targs...> &);
 	template<template<class...>class T> std::false_type is(...);
 
+	//Type of *arg, or void if *arg is not valid.
+	template<class T>
+	decltype(*std::declval<T&&>()) startype(T &&t);
+	int startype(...);
+
 	//*obj is a T
 	//is a struct
-	template<class T, class Actual> decltype(is<T>(*std::declval<const Actual&>())) star_is(const Actual &);
+	template<class T, class Actual>
+	decltype(is<T>(*std::declval<Actual&&>())) star_is(Actual&&);
 	template<class T> std::false_type star_is(...);
 	//is a template
-	template<template<class...>class T, class...Targs> std::true_type star_is(const T<Targs...> &);
+	template<template<class...>class T, class Actual>
+	decltype(is<T>(*std::declval<Actual&&>())) star_is(Actual&&);
 	template<template<class...>class T> std::false_type star_is(...);
 
 	template<template<class>class Object, class T>
@@ -41,6 +49,7 @@ namespace cppy
 		decltype(is<T>(std::declval<Actual&&>()))::value,
 		typename cvrefmatch<T, Actual&&>::type,
 		Actual&&>::type as(Actual &&actual) { return std::forward<Actual>(actual); }
+
 
 //	//Add exist argument to enabled
 //	template<bool enable, class T=bool, class Exist=void> struct enabled {};

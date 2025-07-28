@@ -105,6 +105,15 @@ int main(int argc, char *argv[]) {
 		CHECK(std::is_same<decltype(cppy::as<a>(ccinst)), const c&>::value)
 		CHECK(std::is_same<decltype(cppy::as<a>(c{})), c&&>::value)
 	}
+	{
+		std::cout << "------------------------------" << std::endl
+		          << "startype" << std::endl
+		          << "------------------------------" << std::endl;
+		a ainst;
+		c cinst;
+		CHECK(std::is_same<decltype(cppy::startype(ainst)), void>::value)
+		CHECK(std::is_same<decltype(cppy::startype(cinst)), a>::value)
+	}
 
 
 

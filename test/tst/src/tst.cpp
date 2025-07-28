@@ -108,8 +108,31 @@ PyObject* basic_test(PyObject *m, PyObject *args_)
 		cppy::List lst;
 		if (lst.size() != 0) { Py_RETURN_FALSE; }
 		std::cout << "before append." << std::endl;
+
+		cppy::PyObjectConverter<cppy::Object> cvt;
+		PyObject* ptr = cvt(args.getitem(0));
+		if (ptr != args.getitem(0).obj) {
+			std::cout << "Convert to ptr (getitem) fail." << std::endl;
+			Py_RETURN_FALSE;
+		}
+		if (ptr != (*args[0]).obj) {
+			std::cout << "Convert to ptr (*[]) fail." << std::endl;
+			Py_RETURN_FALSE;
+		}
+		if (ptr != args[0]->obj) {
+			std::cout << "Convert to ptr ([]->) fail." << std::endl;
+			Py_RETURN_FALSE;
+		}
+		if (ptr != cvt(args[0])) {
+			std::cout << "Convert to ptr converter([]) fail." << std::endl;
+			Py_RETURN_FALSE;
+		}
+
 		lst.append(args.getitem(0));
 		lst.insert(0, args.getitem(0));
+
+		lst.append(args[0]);
+		lst.insert(0, args[0]);
 	}
 	Py_RETURN_TRUE;
 }

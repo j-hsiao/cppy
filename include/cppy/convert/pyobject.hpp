@@ -40,26 +40,29 @@ namespace cppy {
 			};
 
 			template<class Actual>
-			struct Converter {
-				using type = typename std::conditional<
-					decltype(is<Object>(std::declval<Actual&&>()))::value,
-					typename std::conditional<
-						decltype(owned<Object>(std::declval<Actual&&>()))::value,
-						ConvertOwned,
-						ConvertBorrowed
-						>::type,
-					typename std::conditional<
-						decltype(star_is<Object>(std::declval<Actual&&>()))::value,
-						typename Converter<decltype(*istd::declval<Actual&&>())>::type,
-						ConvertGeneric
-						>::type
-				>::type
+			using ConvertObject = typename std::conditional<
+				decltype(owned<Object>(std::declval<Actual&&>()))::value,
+				ConvertOwned, ConvertBorrowed >::type;
+
+			struct ConvertProxy {
+				template<class Actual>
+				decltype(ConvertObject<decltype(*std::declval<Actual&&>())>{}(*std::declval<Actual&&>()))
+				operator()(Actual &&a) const { return ConvertObject<Actual&&>{}(*a); }
 			};
+
+			template<class Actual>
+			using Converter = typename std::conditional<
+				decltype(is<Object>(std::declval<Actual&&>()))::value,
+				ConvertObject<Actual&&>,
+				typename std::conditional<
+					decltype(star_is<Object>(std::declval<Actual&&>()))::value,
+					ConvertProxy, ConvertGeneric >::type
+			>::type;
 		public:
 		PyObject* operator()(PyObject* p) const { return p; }
 
 		template<class T>
-		decltype(typename Converter<T&&>::type{}(std::declval<T&&>())) operator()(T &&t) const
+		decltype(Converter<T&&>{}(std::declval<T&&>())) operator()(T &&t) const
 		{ return Converter<T&&>{}(std::forward<T>(t)); }
 	};
 
