@@ -21,91 +21,112 @@ namespace cppy {
 		private:
 			//generic
 			struct ConvertGeneric {
-				template<class Actual>
-				ObjectWrap<Object<typename std::decay<Actual>::type>> operator()(Actual &&a) const
-				{ return {std::forward<Actual>(a)}; }
+				template<class T>
+				ObjectWrap<Object<typename std::decay<T>::type>> operator()(T &&o) const
+				{ return {std::forward<T>(o)}; }
 			};
 			//owned
 			struct ConvertOwned {
 				template<class T>
 				ObjectWrap<Object<T>> operator()(Object<T> &&o) const { return {std::move(o)}; }
+				template<class T>
+				ObjectWrap<Object<T>> operator()(const Object<T> &&o) const { return {std::move(o)}; }
 
 				template<class T>
 				PyObject* operator()(const Object<T> &o) const { return o.obj; }
 			};
 			//borrowed
 			struct ConvertBorrowed {
-				template<class Actual>
-				PyObject* operator()(Actual &&a) const { return a.obj; }
+				template<class T>
+				PyObject* operator()(T &&o) const { return o.obj; }
 			};
 
-			template<class Actual>
+			template<class T>
 			using ConvertObject = typename std::conditional<
-				decltype(owned<Object>(std::declval<Actual&&>()))::value,
+				decltype(owned<Object>(std::declval<T&&>()))::value,
 				ConvertOwned, ConvertBorrowed >::type;
 
 			struct ConvertProxy {
-				template<class Actual>
-				decltype(ConvertObject<decltype(*std::declval<Actual&&>())>{}(*std::declval<Actual&&>()))
-				operator()(Actual &&a) const { return ConvertObject<Actual&&>{}(*a); }
+				template<class T>
+				decltype(ConvertObject<decltype(*std::declval<T&&>())>{}(*std::declval<T&&>()))
+				operator()(T &&o) const {
+					return ConvertObject<decltype(*o)>{}(*o);
+				}
 			};
 
-			template<class Actual>
+			template<class T>
 			using Converter = typename std::conditional<
-				decltype(is<Object>(std::declval<Actual&&>()))::value,
-				ConvertObject<Actual&&>,
+				decltype(is<Object>(std::declval<T&&>()))::value,
+				ConvertObject<T&&>,
 				typename std::conditional<
-					decltype(star_is<Object>(std::declval<Actual&&>()))::value,
+					decltype(star_is<Object>(std::declval<T&&>()))::value,
 					ConvertProxy, ConvertGeneric >::type
 			>::type;
 		public:
 		PyObject* operator()(PyObject* p) const { return p; }
 
 		template<class T>
-		decltype(Converter<T&&>{}(std::declval<T&&>())) operator()(T &&t) const
-		{ return Converter<T&&>{}(std::forward<T>(t)); }
+		decltype(Converter<T>{}(std::declval<T&&>())) operator()(T &&t) const
+		{ return Converter<T>{}(std::forward<T>(t)); }
 	};
 
-	//Steals reference from input.
+	//Steals reference from input if owned non-const rvalue.
+	//Otherwise incref if applicable
 	template<template<class> class Object>
 	struct StealConverter {
-		PyObject* operator()(PyObject* p) const {
-			//give a ref to steal
-			Py_INCREF(p);
-			return p;
-		}
-
-		template<class T> PyObject* operator()(T &&t) const
-		{ return Converter<decltype(is<Object>(std::forward<T>(t)))>{}(std::forward<T>(t)); }
-
 		private:
 			//If Borrowed, then must incref
 			//If const owned, then must incref
 			//If non-const owned, then steal whether rvalue or lvalue
 
-			template<class IsObject, int dummy=0> struct Converter {
+			struct ConvertGeneric {
 				//Generic object, use Object to convert to PyObject*
 				template<class T> PyObject* operator()(T &&t) const
 				{ return Object<typename std::decay<T&&>::type>(std::forward<T>(t)).ret(); }
 			};
 
-			template<int dummy>
-			struct Converter<std::true_type, dummy> {
-				template<class T>
-				PyObject* operator()(const Object<T> &owned) const {
-					Py_INCREF(owned.obj);
-					return owned.obj;
+			struct ConvertObject {
+				//const so cannot steal
+				template<class T> PyObject* operator()(const Object<T> &o) const {
+					Py_INCREF(o.obj);
+					return o.obj;
+				}
+				template<class T> PyObject* operator()(Object<T&> &&o) const {
+					Py_INCREF(o.obj);
+					return o;
 				}
 
-				template<class T> PyObject* operator()(Object<T> &&owned) const
-				{ return owned.ret(); }
-
-				//Borrowed refence has no actual reference to steal so incref.
-				template<class T> PyObject* operator()(Object<T&> &&borrowed) const {
-					Py_INCREF(borrowed.obj);
-					return borrowed.obj;
-				}
+				//Owned and can steal
+				template<class T> PyObject* operator()(Object<T> &&o) const
+				{ return o.ret(); }
 			};
+
+			struct ConvertProxy {
+				template<class T> PyObject* operator()(T &&o) const
+				{ return ConvertObject{}(*o); }
+			};
+
+			template<class T>
+			using Converter = typename std::conditional<
+				decltype(is<Object>(std::declval<T&&>()))::value,
+				ConvertObject,
+				typename std::conditional<
+					decltype(star_is<Object>(std::declval<T&&>()))::value,
+					ConvertProxy, ConvertGeneric
+				>::type
+			>::type;
+
+		public:
+
+		PyObject* operator()(PyObject* p) const {
+			//Incref to ensure there is a ref that can be stolen.
+			Py_INCREF(p);
+			return p;
+		}
+
+		template<class T> PyObject* operator()(T &&t) const
+		{ return Converter<T>{}(std::forward<T>(t)); }
+
 	};
 
 }

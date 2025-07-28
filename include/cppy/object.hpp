@@ -102,6 +102,7 @@ namespace cppy
 		template<class OActual>
 		Owned(Owned<OActual> &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
 
+		using Object<>::ret;
 		PyObject* ret() {
 			PyObject *ret = this->obj;
 			this->obj = nullptr;
