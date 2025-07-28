@@ -49,7 +49,10 @@ namespace cppy
 		Object& object() & { return *this; }
 		Object&& object() && { return static_cast<Object&&>(*this); }
 
-		PyObject* ret() const { return obj; }
+		PyObject* ret() const {
+			Py_INCREF(obj);
+			return obj;
+		}
 		bool check() const { return true; }
 		static constexpr const char* name() { return "Object"; }
 
