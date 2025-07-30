@@ -1,8 +1,10 @@
 #ifndef CPPY_FLOAT_HPP
 #define CPPY_FLOAT_HPP
 
-#include "cppy/object.hpp"
-#include "cppy/mixin.hpp"
+#include <cppy/object.hpp>
+#include <cppy/string.hpp>
+#include <cppy/mixin/checkthrow.hpp>
+#include <cppy/mixin/convertible.hpp>
 
 namespace cppy
 {
@@ -17,33 +19,34 @@ namespace cppy
 		static double toc(PyObject *obj) { return PyFloat_AsDouble(obj); }
 		static constexpr double badc() { return -1.0; }
 	};
+	template<class T> struct FloatConvert: FloatConvert<double>{};
 
-	template<>
-	struct Object<float>: CheckThrow<float>, Convertible<float, FloatConvert>, Make<float>, Object<>
+	template<> struct Object<float&>:
+		CheckThrow<Object<float&>>,
+		Convertible<Object<float&>, FloatConvert>,
+		Borrowed
 	{
-		using Make<float>::Make;
+		using Borrowed::Borrowed;
+
 		bool check() const { return PyFloat_Check(this->obj); }
 		static constexpr const char* name() { return "float"; }
-		using CheckThrow<float>::checkthrow;
+
+		operator double() const { return to<double>(); }
 	};
 
 	template<>
-	struct Object<float, true>: Managed<PyObject*>, Make<float, true>
-	{
-		using Base = Make<float, true>;
+	struct Object<float>: Owned<float> {
+		using Base = Owned<float>;
 		using Base::Base;
 
-		Object(const char *val): Base(success(PyFloat_FromString(Object<const char*, true>(val).obj))) {}
+		Object(const char *val): Base(success(PyFloat_FromString(Object<const char*>(val).obj))) {}
+		template<class T>
+		Object(T&&i): Object(static_cast<double>(i)) {}
 		Object(float val): Base(success(PyFloat_FromDouble(val))) {}
 		Object(double val): Base(success(PyFloat_FromDouble(val))) {}
 	};
 
-	//In python, double/float are the same
-	template<bool m> struct Object<double, m>: Object<float, m>, Make<double, m>
-	{
-		using Object<float, m>::Object;
-		using Make<double, m>::Make;
-	};
-
+	template<> struct Object<double&>: Object<float&>{ using Object<float&>::Object; };
+	template<> struct Object<double>: Object<float>{ using Object<float>::Object; };
 }
 #endif//CPPY_FLOAT_HPP

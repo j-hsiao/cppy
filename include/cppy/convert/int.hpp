@@ -10,10 +10,11 @@ namespace cppy {
 		Py_ssize_t operator()(PyObject *obj) const
 		{ return Object<int&>(obj); }
 
+		//no need to use checkthrow() because conversion to int
+		//would error or not
 		template<class T>
 		Py_ssize_t operator()(const Object<T> &obj) const
 		{ return Object<int&>(obj.obj); }
-
 		Py_ssize_t operator()(const Object<int&> &obj) const
 		{ return obj; }
 
@@ -37,6 +38,13 @@ namespace cppy {
 				ConvertIntegral
 			>::type{}(std::forward<T>(t));
 		}
+	};
+
+	template<template<class> class Object>
+	struct IndexConverter: IntConverter<Object> {
+		using IntConverter<Object>::operator();
+		int operator()(double) const = delete;
+		int operator()(float) const = delete;
 	};
 }
 #endif//CPPY_CONVERT_INT_HPP

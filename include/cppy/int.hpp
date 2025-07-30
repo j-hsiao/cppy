@@ -52,6 +52,7 @@ namespace cppy
 		static void* toc(PyObject *obj) { return PyLong_AsVoidPtr(obj); }
 		static constexpr void* badc() { return NULL; }
 	};
+	template<class Type> struct IntConvert: IntConvert<int> {};
 
 	template<> struct Object<int&>:
 		CheckThrow<Object<int&>>,
@@ -62,6 +63,8 @@ namespace cppy
 
 		bool check() const { return PyLong_Check(this->obj); }
 		static constexpr const char* name() { return "int"; }
+
+		operator Py_ssize_t() const { return to<Py_ssize_t>(); }
 	};
 
 

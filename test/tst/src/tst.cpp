@@ -3,7 +3,7 @@
 #include <cppy/string.hpp>
 #include <cppy/tuple.hpp>
 #include <cppy/list.hpp>
-//#include <cppy/float.hpp>
+#include <cppy/float.hpp>
 //#include <cppy/method.hpp>
 //#include <cppy/util.hpp>
 
@@ -11,6 +11,26 @@
 
 PyObject* basic_test(PyObject *m, PyObject *args_)
 {
+	{
+		cppy::Object<float> floatfromdouble(3.14);
+		cppy::Object<float> floatfromfloat(32.4f);
+		cppy::Object<float> floatfromint(3);
+#		define CHECK(...) \
+		std::cerr << #__VA_ARGS__ ": "; \
+		if (!(__VA_ARGS__)) { \
+			std::cerr << "fail" << std::endl; \
+			Py_RETURN_FALSE; \
+		} \
+		else { std::cerr << "pass" << std::endl; }
+
+		CHECK(floatfromdouble.to<double>() == 3.14)
+		CHECK(floatfromfloat.to<float>() == 32.4f)
+		CHECK(floatfromint.to<int>() == 3)
+		CHECK(3.14 == floatfromdouble)
+		CHECK(32.4f == floatfromfloat)
+		CHECK(3 == floatfromint)
+	}
+
 	{
 		std::cout << "------------------------------" << std::endl
 		          << "Running basic test as generic borrowed reference object." << std::endl;

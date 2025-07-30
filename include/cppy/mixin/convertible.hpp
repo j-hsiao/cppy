@@ -23,7 +23,7 @@ namespace cppy
 			if (val == conv::badc() && PyErr_Occurred() != NULL) { throw PyError(); }
 			return val;
 		}
-		template<class O> operator O() const { return to<O>(); }
+		template<class O> explicit operator O() const { return to<O>(); }
 	};
 }
 #endif//CPPY_MIXIN_CONVERTIBLE_HPP

@@ -49,12 +49,6 @@ namespace cppy
 		}
 	};
 
-	std::ostream& operator<<(std::ostream &o, const Object<const char*&> &str) {
-		auto tmp = str.utf8();
-		o.write(tmp.data, tmp.size);
-		return o;
-	}
-
 	template<> struct Object<const char*>: Owned<const char*>
 	{
 		using Owned<const char*>::Owned;
@@ -82,5 +76,24 @@ namespace cppy
 	Object<const char*> Object<>::str() const
 	{ return Object<const char*>(success(PyObject_Str(obj))); }
 
+
+	//------------------------------
+	//operator<< for ostream
+	//------------------------------
+	std::ostream& operator<<(std::ostream &o, const Object<const char*&> &str) {
+		auto tmp = str.utf8();
+		o.write(tmp.data, tmp.size);
+		return o;
+	}
+	std::ostream& operator<<(std::ostream &o, const Object<const char*> &str) {
+		auto tmp = str.utf8();
+		o.write(tmp.data, tmp.size);
+		return o;
+	}
+
+	std::ostream& operator<<(std::ostream &o, const Object<> &obj) {
+		o << obj.str();
+		return o;
+	}
 }
 #endif//CPPY_STRING_HPP

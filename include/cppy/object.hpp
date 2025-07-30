@@ -49,6 +49,7 @@ namespace cppy
 		Object& object() & { return *this; }
 		Object&& object() && { return static_cast<Object&&>(*this); }
 
+		//Give a PyObject* suitable as return value (it owns reference)
 		PyObject* ret() const {
 			Py_INCREF(obj);
 			return obj;
@@ -77,7 +78,7 @@ namespace cppy
 			{ throw PyError(); }
 		}
 
-		operator bool() const {
+		explicit operator bool() const {
 			int result = PyObject_IsTrue(obj);
 			if (result < 0) { throw PyError(); }
 			return result == 1;
