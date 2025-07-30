@@ -27,18 +27,18 @@ namespace cppy {
 
 		Object<List_> slice(Py_ssize_t start, Py_ssize_t stop) const;
 
-		//TODO? PyList_GET_ITEM?
-		//no error checking
+		//TODO? PyList_GET_ITEM? (no error checking)
+		//NOTE: must be 0 to size()-1 (negative not supported)
 		template<class Idx>
 		Object<> getitem(Idx &&idx) const
-		{ return Object<>(success(PyList_GetItem(obj, IntConverter<Object>{}(std::forward<Idx>(idx))))); }
+		{ return Object<>(success(PyList_GetItem(obj, IndexConverter<Object>{}(std::forward<Idx>(idx))))); }
 
 		//TODO PyList_SET_ITEM?:  steal reference, existing items not decrefed no error checking, is macro
 		//setitem steals reference.
 		template<class Idx, class Value>
 		Object<List_&>& setitem(Idx &&idx, Value &&value)
 		{
-			IntConverter<Object> intcvt;
+			IndexConverter<Object> intcvt;
 			StealConverter<Object> stealcvt;
 			if (PyList_SetItem(obj, intcvt(std::forward<Idx>(idx)), stealcvt(std::forward<Value>(value))) == -1)
 			{ throw PyError(); }
@@ -48,7 +48,7 @@ namespace cppy {
 		//insert does not steal
 		template<class Idx, class Value>
 		Object<List_&>& insert(Idx &&idx, Value &&value) {
-			IntConverter<Object> intcvt;
+			IndexConverter<Object> intcvt;
 			PyObjectConverter<Object> objcvt;
 			if (PyList_Insert(obj, intcvt(std::forward<Idx>(idx)), objcvt(std::forward<Value>(value))) == -1)
 			{ throw PyError(); }
