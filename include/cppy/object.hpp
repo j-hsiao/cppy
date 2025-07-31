@@ -55,7 +55,7 @@ namespace cppy
 			return obj;
 		}
 		bool check() const { return true; }
-		static constexpr const char* name() { return "Object"; }
+		static constexpr const char* name() { return "object"; }
 
 		//repr
 		Object<const char*> repr() const;

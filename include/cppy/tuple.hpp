@@ -25,7 +25,7 @@ namespace cppy
 		using Sized<Object<Tuple_&>, PyTuple_Size>::size;
 
 		bool check() const { return PyTuple_Check(obj); }
-		static constexpr const char* name() { return "Tuple"; }
+		static constexpr const char* name() { return "tuple"; }
 
 		//no error checking.
 		Py_ssize_t size_() const { return PyTuple_GET_SIZE(obj); }

@@ -21,7 +21,7 @@ namespace cppy {
 		using Mapping<Object<List_&>>::operator[];
 
 		bool check() const { return PyList_Check(obj); }
-		static constexpr const char* name() { return "List"; }
+		static constexpr const char* name() { return "list"; }
 
 		Py_ssize_t size_() const { return PyList_GET_SIZE(obj); }
 
