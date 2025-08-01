@@ -131,7 +131,7 @@ namespace cppy {
 	inline Object<List_> Object<List_&>::slice(Py_ssize_t start, Py_ssize_t stop) const
 	{ return Object<List_>(success(PyList_GetSlice(obj, start, stop))); }
 
-	struct List: Object<List_> { using Object<List_>::Object; };
-	struct ListRef: Object<List_&> { using Object<List_&>::Object; };
+	typedef Object<List_> List;
+	typedef Object<List_&> ListRef;
 }
 #endif//CPPY_LIST_HPP

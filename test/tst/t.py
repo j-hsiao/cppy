@@ -36,5 +36,6 @@ if (
     or check(testmodule.test_tuple, [slice(10,30)], (3.14, 101), "hello", None)
     or check(testmodule.test_convert, 1,2,3,'a', 'b', 'c')
     or check(testmodule.test_list, 'abc', 123)
+    or check(testmodule.test_dict, dict(a=1, b=2))
 ):
     sys.exit(1)

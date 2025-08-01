@@ -88,8 +88,8 @@ namespace cppy
 	inline Object<Tuple_> Object<Tuple_&>::slice(Py_ssize_t start, Py_ssize_t stop) const
 	{ return Object<Tuple_>(success(PyTuple_GetSlice(obj, start, stop))); }
 
-	struct Tuple: Object<Tuple_> { using Object<Tuple_>::Object; };
-	struct TupleRef: Object<Tuple_&> { using Object<Tuple_&>::Object; };
+	typedef Object<Tuple_> Tuple;
+	typedef Object<Tuple_&> TupleRef;
 
 
 	//// ------------------------------

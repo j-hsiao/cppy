@@ -32,7 +32,7 @@ namespace cppy
 
 		template<class Key>
 		bool contains(Key &&key) const {
-			PyOjectConverter<Object> cvt;
+			PyObjectConverter<Object> cvt;
 			if (int val = PyDict_Contains(obj, cvt(std::forward<Key>(key)))) {
 				if (val == 1) { return true; }
 				else { throw PyError(); }
@@ -41,7 +41,7 @@ namespace cppy
 		}
 		////special case for const char*, on 3.13+
 		//bool contains(const char* key) const {
-		//	PyOjectConverter<Object> cvt;
+		//	PyObjectConverter<Object> cvt;
 		//	if (int val = PyDict_ContainsString(obj, key)) {
 		//		if (val == 1) { return true; }
 		//		else { throw PyError(); }
@@ -59,6 +59,7 @@ namespace cppy
 			{ throw PyError(); }
 			return *this;
 		}
+		template<class Value>
 		Object<Dict_&>& setitem(const char *key, Value &&value) {
 			PyObjectConverter<Object> cvt;
 			if (PyDict_SetItemString(obj, key, cvt(std::forward<Value>(value))))
@@ -126,20 +127,21 @@ namespace cppy
 		}
 		template<class Key>
 		Object<> getitem(Key &&key) const {
-			auto ret = getitem(std::forward<Key>(key));
+			auto ret = getitem_(std::forward<Key>(key));
 			if (!ret.obj) { throw KeyError(); }
 			return ret;
 		}
-
-
 	};
 
 	template<> struct Object<Dict_>: Owned<Dict_> {
 		using Owned<Dict_>::Owned;
 	};
 
-	template<> Object<Dict_> Object<Dict_&>::copy() const
+	Object<Dict_> Object<Dict_&>::copy() const
 	{ return Object<Dict_>(success(PyDict_Copy(obj))); }
+
+	typedef Object<Dict_&> DictRef;
+	typedef Object<Dict_> Dict;
 
 }
 #endif//CPPY_DICT_HPP
