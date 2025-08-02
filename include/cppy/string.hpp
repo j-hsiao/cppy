@@ -6,6 +6,7 @@
 #include <cppy/object.hpp>
 #include <cppy/errors.hpp>
 #include <cppy/mixin/checkthrow.hpp>
+#include <cppy/util.hpp>
 
 #include <cstring>
 #include <string>
@@ -93,6 +94,12 @@ namespace cppy
 
 	std::ostream& operator<<(std::ostream &o, const Object<> &obj) {
 		o << obj.str();
+		return o;
+	}
+
+	template<class T, typename std::enable_if<decltype(star_is<Object>(std::declval<T&&>()))::value, bool>::type=true>
+	std::ostream& operator<<(std::ostream &o, T &&t) {
+		o << t->str();
 		return o;
 	}
 }
