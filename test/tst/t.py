@@ -29,6 +29,8 @@ def check(func, *args):
         print('  before', tupcount1)
         print('  after ', tupcount2)
         ret = True
+    if errored:
+        print('  !!FAILED!! Return value was False.')
     return errored
 
 if (

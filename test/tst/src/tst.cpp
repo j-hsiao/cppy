@@ -1,10 +1,10 @@
-#include <cppy/object.hpp>
-#include <cppy/int.hpp>
-#include <cppy/string.hpp>
-#include <cppy/tuple.hpp>
-#include <cppy/list.hpp>
-#include <cppy/float.hpp>
 #include <cppy/dict.hpp>
+#include <cppy/list.hpp>
+#include <cppy/tuple.hpp>
+#include <cppy/string.hpp>
+#include <cppy/float.hpp>
+#include <cppy/int.hpp>
+#include <cppy/object.hpp>
 //#include <cppy/method.hpp>
 //#include <cppy/util.hpp>
 
@@ -232,16 +232,20 @@ PyObject* test_dict(PyObject *m, PyObject *args_) {
 	try {
 		dct.setitem(1, 2);
 		iout << dct << std::endl;
-		//TODO Why mapping dct[1] causing some kind of error
-		//but getitem(1) no error
-		//auto thing = dct.getitem(1);
-		//iout << thing << std::endl;
-		iout << dct.getitem(1).str() << std::endl;
-		//iout << dct[1]->str() << std::endl;
+		iout << *dct[1] << std::endl;
+		iout << dct.getitem(1) << std::endl;
+		iout << dct[1] << std::endl;
+		auto result = dct.getitem(69, nullptr);
+		if (result.obj) { Py_RETURN_FALSE; }
 	}
 	catch (cppy::Error&) {
 		return NULL;
 	}
+	try {
+		*dct[0xFFFFFFFFFFFFFFFF];
+		Py_RETURN_FALSE;
+	}
+	catch (cppy::Error&) {PyErr_Clear();}
 
 
 
