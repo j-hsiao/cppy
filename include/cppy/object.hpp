@@ -142,6 +142,9 @@ namespace cppy
 		template<class V> Object(V &&v): obj(std::forward<V>(v)) {}
 		operator Object<T>() const { return obj; }
 	};
+
+	typedef Object<PyObject> Obj;
+	typedef Object<> ObjRef;
 }
 
 #endif//CPPY_PYOBJ_HPP
