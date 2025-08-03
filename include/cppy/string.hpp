@@ -44,12 +44,26 @@ namespace cppy
 		}
 		operator const char*() const { return c_str(); }
 
+		bool operator==(const char *s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s, info.size) == 0;
+		}
+		bool operator==(std::string &s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s.c_str(), info.size) == 0;
+		}
+
 		std::string string() const {
 			UTF8 tmp = utf8();
 			return std::string(tmp.data, tmp.size);
 		}
 		explicit operator std::string() const { return string(); }
+
+		Object<const char*> slice(Py_ssize_t start, Py_ssize_t stop) const;
 	};
+	template<class V> bool operator==(V &&v, const Object<const char*&>&o) { return o == v; }
+	template<class V> bool operator!=(V &&v, const Object<const char*&>&o) { return !(o == v); }
+	template<class V> bool operator!=(const Object<const char*&>&o, V &&v) { return !(o == v); }
 
 	template<> struct Object<const char*>: Owned<const char*>
 	{
@@ -67,6 +81,18 @@ namespace cppy
 	template<std::size_t N>
 	struct Object<const char (&)[N]>: Object<const char*>
 	{ using Object<const char*>::Object; };
+
+
+	inline Object<const char*> Object<const char*&>::slice(Py_ssize_t start, Py_ssize_t stop) const {
+#		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
+		PyObject *ret = PyUnicode_Substring(obj, start, stop);
+		if (ret) { return Object<const char*>(ret); }
+		throw PyError();
+#		else
+		// TODO
+		static_assert(false, "NOT YET IMPLEMENTED");
+#		endif
+	}
 
 
 

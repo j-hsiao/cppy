@@ -2,15 +2,16 @@
 #define CPPY_MIXIN_CONVERTIBLE_HPP
 
 #include <cppy/errors.hpp>
+#include <type_traits>
 namespace cppy
 {
 	// Mixin for derived objects that can be converted to some c type.
 	// struct Converter<T>:
 	// {
-	//	 T toc(PyObject*);
-	//	 static T bad;
+	//	 static T toc(PyObject*);
+	//	 static (constexpr) T badc();
 	// }
-	// toc converts PyObject* to a T type.  If the result == bad,
+	// toc converts PyObject* to a T type.  If the result == badc(),
 	// then check PyErr_Occurred to see if it was really a bad
 	// conversion.
 	template<class Derived, template<class> class Converter>
@@ -24,6 +25,14 @@ namespace cppy
 			return val;
 		}
 		template<class O> explicit operator O() const { return to<O>(); }
+
+		template<class T>
+		bool operator==(T &&t) const
+		{ return t == to<typename std::decay<T>::type>(); }
 	};
+
+	template<class Derived, template<class> class Converter, class Value>
+	bool operator==(Value &&v, const Convertible<Derived, Converter> &o)
+	{ return o == v; }
 }
 #endif//CPPY_MIXIN_CONVERTIBLE_HPP

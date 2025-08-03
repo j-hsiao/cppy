@@ -41,7 +41,7 @@ static Indented iout(std::cout);
 
 #define CHECK(...) \
 	{ \
-		iout << #__VA_ARGS__ ": "; \
+		iout << "  " #__VA_ARGS__ ": "; \
 		if (!(__VA_ARGS__)) { \
 			iout << "fail" << std::endl; \
 			Py_RETURN_FALSE; \
@@ -197,9 +197,10 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		iout << "------------------------------" << std::endl
 		     << "Running basic test as generic borrowed reference object." << std::endl;
 		cppy::Object<> args(args_);
-		iout << "  size: " << args.size() << std::endl
-		     << "  str : " << args.str() << std::endl
-		     << "  repr: " << args.repr() << std::endl;
+		CHECK(args.size() == 5)
+		CHECK(args.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(args.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(static_cast<bool>(args.size()) == static_cast<bool>(args))
 	}
 
 	{
@@ -207,26 +208,62 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		     << "Running basic test as generic owned reference object." << std::endl;
 		cppy::Object<> borrowed(args_);
 		cppy::Object<PyObject> owned(borrowed);
-		iout << "  size: " << owned.size() << std::endl
-		     << "  str : " << owned.str() << std::endl
-		     << "  repr: " << owned.repr() << std::endl;
+		CHECK(owned.size() == 5)
+		CHECK(owned.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(owned.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(static_cast<bool>(owned.size()) == static_cast<bool>(owned))
 	}
 
 	{
 		iout << "------------------------------" << std::endl
 		     << "indexing const generic borrowed reference." << std::endl;
-		const cppy::Object<> args(args_);
-		for (int i=0; i<args.size(); ++i)
-		{ iout << "  " << i << ": " << args[i]->str() << std::endl; }
-	}
+		const cppy::ObjRef args(args_);
+		CHECK(args[0]->str() == "[slice(10, 30, None)]")
+		CHECK(args[0]->repr() == "[slice(10, 30, None)]")
+		CHECK(!args[0]->is_none())
+		CHECK(args[1]->str()  == "(3.14, 101)")
+		CHECK(args[1]->repr() == "(3.14, 101)")
+		CHECK(!args[1]->is_none())
+		CHECK(args[2]->str()  == "hello")
+		CHECK(args[2]->repr() == "'hello'")
+		CHECK(!args[2]->is_none())
+		CHECK(args[3]->str()  == "None")
+		CHECK(args[3]->repr() == "None")
+		CHECK(args[3]->is_none())
+		CHECK(args[4]->str()  == "MyThing(32)")
+		CHECK(args[4]->repr() == "MyThing(32)")
+		CHECK(!args[4]->is_none())
 
+		CHECK(args.getitem(0).str() == "[slice(10, 30, None)]")
+		CHECK(args.getitem(0).repr() == "[slice(10, 30, None)]")
+		CHECK(!args.getitem(0).is_none())
+		CHECK(args.getitem(1).str()  == "(3.14, 101)")
+		CHECK(args.getitem(1).repr() == "(3.14, 101)")
+		CHECK(!args.getitem(1).is_none())
+		CHECK(args.getitem(2).str()  == "hello")
+		CHECK(args.getitem(2).repr() == "'hello'")
+		CHECK(!args.getitem(2).is_none())
+		CHECK(args.getitem(3).str()  == "None")
+		CHECK(args.getitem(3).repr() == "None")
+		CHECK(args.getitem(3).is_none())
+		CHECK(args.getitem(4).str()  == "MyThing(32)")
+		CHECK(args.getitem(4).repr() == "MyThing(32)")
+		CHECK(!args.getitem(4).is_none())
+
+		iout << "------------------------------" << std::endl
+		     << "getattr" << std::endl;
+
+		CHECK(args[4]->attr("value").as<int&>() == 32)
+	}
 
 	{
 		iout << "------------------------------" << std::endl
-		     << "indexing non-const generic borrowed reference." << std::endl;
-		cppy::Object<> args(args_);
-		for (int i=0; i<args.size(); ++i)
-		{ iout << "  " << i << ": " << args[i]->str() << std::endl; }
+		     << "generic setitem" << std::endl;
+		cppy::List lst(1,2,3);
+		CHECK(lst.size() == 3)
+		cppy::Object<> obj(lst);
+		obj[0] = 32;
+		CHECK(obj.str() == "[32, 2, 3]")
 	}
 	Py_RETURN_TRUE;
 }
