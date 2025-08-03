@@ -84,6 +84,9 @@ namespace cppy
 			return result == 1;
 		}
 		bool is_none() const { return obj == Py_None; }
+
+		template<class T>
+		Object<T> as() const { return Object<T>(*this); }
 	};
 
 	//Intermediate for copy constructors from borrowed refs.

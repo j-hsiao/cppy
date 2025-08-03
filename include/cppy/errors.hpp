@@ -13,6 +13,9 @@ namespace cppy
 	struct Error: std::runtime_error {
 		template<class...T>
 		Error(T&&...t): std::runtime_error(std::forward<T>(t)...) {}
+
+		//Clear error.
+		void clear() const { PyErr_Clear(); }
 	};
 
 	//Innate python error occurred. After catching, return NULL.

@@ -48,6 +48,7 @@ namespace cppy
 			UTF8 tmp = utf8();
 			return std::string(tmp.data, tmp.size);
 		}
+		explicit operator std::string() const { return string(); }
 	};
 
 	template<> struct Object<const char*>: Owned<const char*>

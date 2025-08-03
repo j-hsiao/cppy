@@ -39,18 +39,26 @@ struct Indented {
 
 static Indented iout(std::cout);
 
-PyObject* test_convert(PyObject *m, PyObject *args_) {
-	{
-		cppy::Object<float> floatfromdouble(3.14);
-		cppy::Object<float> floatfromfloat(32.4f);
-		cppy::Object<float> floatfromint(3);
-#		define CHECK(...) \
+#define CHECK(...) \
+	{ \
 		iout << #__VA_ARGS__ ": "; \
 		if (!(__VA_ARGS__)) { \
 			iout << "fail" << std::endl; \
 			Py_RETURN_FALSE; \
 		} \
-		else { iout << "pass" << std::endl; }
+		else { iout << "pass" << std::endl; } \
+	}
+
+//Conversion, It seems that conversion operators
+//are "ambiguous" regardless of what woud be seemingly best
+//ex: comparison to an int can be int == double, int == int, int == float,
+//etc if those conversion operators are defined.  As a result,
+//probably only a single implicit conversion should be allowed.
+PyObject* test_convert(PyObject *m, PyObject *args_) {
+	{
+		cppy::Object<float> floatfromdouble(3.14);
+		cppy::Object<float> floatfromfloat(32.4f);
+		cppy::Object<float> floatfromint(3);
 
 		CHECK(floatfromdouble.to<double>() == 3.14)
 		CHECK(floatfromfloat.to<float>() == 32.4f)
@@ -83,64 +91,103 @@ PyObject* test_convert(PyObject *m, PyObject *args_) {
 PyObject* test_list(PyObject *m, PyObject *args_) {
 	{
 		iout << "------------------------------" << std::endl
-		     << "list creation" << std::endl
-		     << "list" << std::endl;
-
+		     << "list creation" << std::endl;
 		cppy::List lst("hello", 72);
-		if (lst.str().string() != "['hello', 72]") { Py_RETURN_FALSE; }
+		CHECK(lst.str().string() == "['hello', 72]")
+		CHECK(lst.size() == 2)
+		CHECK(lst.size_() == 2)
 		iout << "------------------------------" << std::endl
 		     << "list to tuple" << std::endl;
-		if (lst.tuple().str().string() != "('hello', 72)") { Py_RETURN_FALSE; }
+		CHECK(lst.tuple().str().string() == "('hello', 72)")
+		CHECK(lst.tuple().size() == 2)
 		iout << "------------------------------" << std::endl
 		     << "extend" << std::endl;
 		lst.extend(lst.tuple());
-		if (lst.str().string() != "['hello', 72, 'hello', 72]") { Py_RETURN_FALSE; }
+		CHECK(lst.str().string() == "['hello', 72, 'hello', 72]")
+		CHECK(lst.size() == 4)
+		CHECK(lst.size_() == 4)
+		iout << "------------------------------" << std::endl
+		     << "slice" << std::endl;
+		CHECK(lst.slice(1,3).size() == 2)
+		CHECK(lst.slice(1,3).size_() == 2)
+		CHECK(lst[1]->obj == lst.slice(1,3)[0]->obj)
+		CHECK(lst[2]->obj == lst.slice(1,3)[1]->obj)
+		CHECK(lst.getitem(1).obj == lst.slice(1,3)[0]->obj)
+		CHECK(lst.getitem(2).obj == lst.slice(1,3)[1]->obj)
+		iout << "------------------------------" << std::endl
+		     << "set item" << std::endl;
+		lst.setitem(0, "hello");
+		lst[1] = 3.1415926;
+		CHECK(lst.size() == 4)
+		CHECK(lst.size_() == 4)
+		iout << lst[0] << std::endl
+		     << lst[1] << std::endl;
+		CHECK(lst[0]->repr().string() == "'hello'")
+		CHECK(lst[1]->as<float&>() == 3.1415926)
+
+		iout << "------------------------------" << std::endl
+		     << "set items" << std::endl
+		     << lst << std::endl;
+		lst.setitems<2>(1,2);
+		iout << lst << std::endl;
+		CHECK(lst.size() == 4)
+		CHECK(lst.size_() == 4)
+		try {
+			CHECK(lst[2]->as<int&>() == 1)
+			CHECK(lst[3]->as<int&>() == 2)
+		}
+		catch (cppy::Error &e) { return NULL; }
+
+		lst.setitems(0, "1", "2");
+		CHECK(lst.size() == 4)
+		CHECK(lst.size_() == 4)
+		CHECK(lst[0]->as<const char*&>().string() == "1")
+		CHECK(lst[1]->as<const char*&>().string() == "2")
+		iout << lst << std::endl;
+
 		iout << "------------------------------" << std::endl
 		     << "clear" << std::endl;
 		lst.clear();
-		if (lst.str().string() != "[]") { Py_RETURN_FALSE; }
-
+		CHECK(lst.str().string() == "[]")
+		CHECK(lst.size() == 0)
+		CHECK(lst.size_() == 0)
 	}
 	{
 		cppy::TupleRef args(args_);
-		iout << "------------------------------" << std::endl
-		     << "append" << std::endl;
-		cppy::List lst;
-		if (lst.size() != 0) { Py_RETURN_FALSE; }
-		iout << "before append." << std::endl;
+		if (args.size() >= 2) {
+			iout << "------------------------------" << std::endl
+			     << "append Object<>" << std::endl;
+			cppy::List lst;
+			CHECK(lst.size() == 0)
+			lst.append(args.getitem(0));
+			CHECK(lst.size() == 1)
+			CHECK(lst[0]->obj == args[0]->obj && lst[0]->obj)
+			lst.append(args[0]);
+			CHECK(lst.size() == 2)
+			CHECK(lst[1]->obj == args[0]->obj && lst[1]->obj)
 
-		cppy::PyObjectConverter<cppy::Object> cvt;
-		PyObject* ptr = cvt(args.getitem(0));
-		if (ptr != args.getitem(0).obj) {
-			iout << "Convert to ptr (getitem) fail." << std::endl;
-			Py_RETURN_FALSE;
-		}
-		if (ptr != (*args[0]).obj) {
-			iout << "Convert to ptr (*[]) fail." << std::endl;
-			Py_RETURN_FALSE;
-		}
-		if (ptr != args[0]->obj) {
-			iout << "Convert to ptr ([]->) fail." << std::endl;
-			Py_RETURN_FALSE;
-		}
-		if (ptr != cvt(args[0])) {
-			iout << "Convert to ptr converter([]) fail." << std::endl;
-			Py_RETURN_FALSE;
-		}
+			iout << "------------------------------" << std::endl
+			     << "insert Object<>" << std::endl;
+			lst.insert(0, args.getitem(1));
+			CHECK(lst.size() == 3)
+			CHECK(lst[0]->obj == args[1]->obj && lst[0]->obj)
 
-		lst.append(args.getitem(0));
-		lst.insert(0, args.getitem(0));
+			lst.insert(0, args[1]);
+			CHECK(lst.size() == 4)
+			CHECK(lst[0]->obj == args[1]->obj && lst[0]->obj)
 
-		lst.append(args[0]);
-		lst.insert(0, args[0]);
-
-		lst.append(0);
-		if (lst[lst[lst.size()-1]]->obj != args[0]->obj) {
-			iout << "lst[lst[-1]] != lst[0]" << std::endl;
-			Py_RETURN_FALSE;
+			iout << "------------------------------" << std::endl
+			     << "append int" << std::endl;
+			lst.append(1234);
+			CHECK(lst.size() == 5)
+			CHECK(lst[lst.size()-1]->as<int&>() == 1234)
+			iout << "------------------------------" << std::endl
+			     << "insert float" << std::endl;
+			lst.insert(1, 4321.1234);
+			CHECK(lst.size() == 6)
+			CHECK(lst[1]->as<float&>() == 4321.1234)
 		}
 	}
-
 	Py_RETURN_TRUE;
 }
 
@@ -245,7 +292,7 @@ PyObject* test_dict(PyObject *m, PyObject *args_) {
 		*dct[0xFFFFFFFFFFFFFFFF];
 		Py_RETURN_FALSE;
 	}
-	catch (cppy::Error&) {PyErr_Clear();}
+	catch (cppy::Error &e) { e.clear(); }
 
 
 

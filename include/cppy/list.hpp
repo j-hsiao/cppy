@@ -64,14 +64,6 @@ namespace cppy {
 			return *this;
 		}
 
-		template<Py_ssize_t start=0, class First, class...Items>
-		void setitems(First &&first, Items&&...items) {
-			if (start + sizeof...(Items) + 1> size()) {
-				throw IndexError("Setting too many items to a tuple.");
-			}
-			setitems_(std::forward<First>(first), std::forward<Items>(items)...);
-		}
-
 		Tuple tuple() const { return Tuple(success(PyList_AsTuple(obj))); }
 
 		Object<List_&>& sort() {
@@ -95,14 +87,39 @@ namespace cppy {
 		Object<List_&>& set_slice(Py_ssize_t low, Py_ssize_t high, const Object<> &itemseq)
 		{ return set_slice(low, high, itemseq.obj); }
 
+		//If start == -1, then first should be the starting index.
+		//Otherwise, the starting position should be compile-time template
+		//argument and arguments should be the items to add.
+		template<Py_ssize_t start=-1, class...Items, typename std::enable_if<(start>=0), bool>::type=true>
+		void setitems(Items&&...items) {
+			if ((start + static_cast<Py_ssize_t>(sizeof...(Items)))> size())
+			{ throw IndexError("Setting too many items to a list."); }
+			setitems_<start>(std::forward<Items>(items)...);
+		}
+
+		template<Py_ssize_t start=-1, class First, class...Items, typename std::enable_if<(start<0), bool>::type=true>
+		void setitems(First &&first, Items&&...items) {
+			Py_ssize_t idx = IndexConverter<Object>{}(std::forward<First>(first));
+			if (idx + static_cast<Py_ssize_t>(sizeof...(Items)) > size())
+			{ throw IndexError("Setting too many items to a list."); }
+			setitems_rt(idx, std::forward<Items>(items)...);
+		}
+
 		private:
 			template<Py_ssize_t pos=0, class First, class...Items>
-			void setitems_(First &&first, Items&&...items)
-			{
+			void setitems_(First &&first, Items&&...items) {
 				setitem(pos, std::forward<First>(first));
-				setitems<pos+1>(std::forward<Items>(items)...);
+				setitems_<pos+1>(std::forward<Items>(items)...);
 			}
 			template<Py_ssize_t pos> void setitems_() {}
+
+			template<class First, class...Items>
+			void setitems_rt(Py_ssize_t start, First &&first, Items&&...items) {
+				setitem(start, std::forward<First>(first));
+				setitems_rt(start+1, std::forward<Items>(items)...);
+			}
+			void setitems_rt(Py_ssize_t) {}
+
 	};
 
 	template<> struct Object<List_>: Owned<List_>
