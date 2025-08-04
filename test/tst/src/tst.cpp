@@ -198,8 +198,8 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		     << "Running basic test as generic borrowed reference object." << std::endl;
 		cppy::Object<> args(args_);
 		CHECK(args.size() == 5)
-		CHECK(args.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
-		CHECK(args.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(args.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing)")
+		CHECK(args.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing)")
 		CHECK(static_cast<bool>(args.size()) == static_cast<bool>(args))
 	}
 
@@ -209,8 +209,8 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		cppy::Object<> borrowed(args_);
 		cppy::Object<PyObject> owned(borrowed);
 		CHECK(owned.size() == 5)
-		CHECK(owned.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
-		CHECK(owned.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing(32))")
+		CHECK(owned.str() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing)")
+		CHECK(owned.repr() == "([slice(10, 30, None)], (3.14, 101), 'hello', None, MyThing)")
 		CHECK(static_cast<bool>(owned.size()) == static_cast<bool>(owned))
 	}
 
@@ -230,8 +230,8 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		CHECK(args[3]->str()  == "None")
 		CHECK(args[3]->repr() == "None")
 		CHECK(args[3]->is_none())
-		CHECK(args[4]->str()  == "MyThing(32)")
-		CHECK(args[4]->repr() == "MyThing(32)")
+		CHECK(args[4]->str()  == "MyThing")
+		CHECK(args[4]->repr() == "MyThing")
 		CHECK(!args[4]->is_none())
 
 		CHECK(args.getitem(0).str() == "[slice(10, 30, None)]")
@@ -246,14 +246,14 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		CHECK(args.getitem(3).str()  == "None")
 		CHECK(args.getitem(3).repr() == "None")
 		CHECK(args.getitem(3).is_none())
-		CHECK(args.getitem(4).str()  == "MyThing(32)")
-		CHECK(args.getitem(4).repr() == "MyThing(32)")
+		CHECK(args.getitem(4).str()  == "MyThing")
+		CHECK(args.getitem(4).repr() == "MyThing")
 		CHECK(!args.getitem(4).is_none())
 
 		iout << "------------------------------" << std::endl
 		     << "getattr" << std::endl;
-
 		CHECK(args[4]->attr("value").as<int&>() == 32)
+		CHECK(args.getitem(4).attr("name").as<const char*&>() == "MyThing")
 	}
 
 	{
@@ -274,35 +274,39 @@ PyObject* test_tuple(PyObject *m, PyObject *args_)
 		iout << "------------------------------" << std::endl
 		     << "using a borrowed Tuple" << std::endl;
 		cppy::TupleRef args(args_);
-		for (int i=0; i<args.size(); ++i)
-		{ iout << "  " << i << ": " << args[i]->str() << std::endl; }
+		CHECK(args.size() == 4)
+		CHECK(args.size_() == 4)
+		CHECK(args[0]->str() == "[slice(10, 30, None)]")
+		CHECK(args[0]->repr() == "[slice(10, 30, None)]")
+		CHECK(args[0]->size() == 1)
+		CHECK(args[1]->as<cppy::Tuple_&>().check())
+		CHECK(args[1]->size() == 2)
+		CHECK(args[1][0]->as<float&>() == 3.14)
+		CHECK(args[1][1]->as<int&>() == 101)
+		CHECK(args[2]->as<const char*&>() == "hello")
+		CHECK(args[3]->is_none())
 	}
 
 	{
 		iout << "------------------------------" << std::endl
 		     << "testing tuple creation" << std::endl;
 		cppy::TupleRef args(args_);
-		if (args.size() >= 3) {
-			cppy::Tuple tmp(
-				args[0]->obj,
-				args[1]->obj,
-				args[2]->obj
-			);
-			iout << "  " << tmp.str() << std::endl;
-		}
-		else {
-			cppy::Tuple tmp(1, 2, 3);
-			iout << "  " << tmp.str() << std::endl;
-		}
+		cppy::Tuple tmp(args[0], args[1], args[2]);
+		CHECK(tmp.size() == 3)
+		CHECK(tmp[0]->obj == args[0]->obj)
+		CHECK(tmp[1]->obj == args[1]->obj)
+		CHECK(tmp[2]->obj == args[2]->obj)
 	}
 
 	{
 		iout << "------------------------------" << std::endl
 		     << "tuple size_+slice" << std::endl;
 		cppy::TupleRef args(args_);
-		if (args.check()) {
-			iout << "  " << args.slice(1,args.size_()).str() << std::endl;
-		}
+		cppy::Tuple sliced = args.slice(1,args.size_());
+		CHECK(sliced.size() == 3)
+		CHECK(sliced[0]->obj == args[1]->obj)
+		CHECK(sliced[1]->obj == args[2]->obj)
+		CHECK(sliced[2]->obj == args[3]->obj)
 	}
 
 	Py_RETURN_TRUE;
@@ -311,30 +315,18 @@ PyObject* test_tuple(PyObject *m, PyObject *args_)
 PyObject* test_dict(PyObject *m, PyObject *args_) {
 	cppy::TupleRef args(args_);
 	cppy::DictRef dct(args[0]);
-	iout << dct << std::endl;
 
-	try {
-		dct.setitem(1, 2);
-		iout << dct << std::endl;
-		iout << *dct[1] << std::endl;
-		iout << dct.getitem(1) << std::endl;
-		iout << dct[1] << std::endl;
-		auto result = dct.getitem(69, nullptr);
-		if (result.obj) { Py_RETURN_FALSE; }
-	}
-	catch (cppy::Error&) {
-		return NULL;
-	}
+	CHECK(dct.str() == "{'a': 1, 'b': 2}" || dct.str() == "{'b': 2, 'a': 1}")
+	dct.setitem(1, 2);
+	CHECK(dct.getitem(1).as<int&>() == 2)
+	dct[1] = 3;
+	CHECK(dct[1]->as<int&>() == 3)
+	CHECK(!dct.getitem("nonexistant_key", nullptr).obj)
 	try {
 		*dct[0xFFFFFFFFFFFFFFFF];
 		Py_RETURN_FALSE;
 	}
 	catch (cppy::Error &e) { e.clear(); }
-
-
-
-
-
 	Py_RETURN_TRUE;
 }
 

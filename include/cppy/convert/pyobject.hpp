@@ -93,7 +93,7 @@ namespace cppy {
 				}
 				template<class T> PyObject* operator()(Object<T&> &&o) const {
 					Py_INCREF(o.obj);
-					return o;
+					return o.obj;
 				}
 
 				//Owned and can steal

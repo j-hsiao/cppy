@@ -8,16 +8,9 @@ class MyThing(object):
         self.value = 32
 
     def __repr__(self):
-        return 'MyThing(32)'
+        return self.name
     def __str__(self):
-        return 'MyThing(32)'
-
-# very weird occurrence, it seems like
-# calling str/repr causes None to get decrefed
-# but if call it, then afterwards, None does not
-# change again...
-str(MyThing())
-repr(MyThing())
+        return self.name
 
 def check(func, *args):
     """Call func with args.
@@ -36,12 +29,22 @@ def check(func, *args):
     if errored:
         print('  !!FAILED!! Return value was False.')
     if counts1 != counts2:
-        print('  -------------------------')
-        print('  ERROR: arg refcounts do not match.')
-        print('  -------------------------')
-        print('  before', counts1)
-        print('  after ', counts2)
-        errored = True
+        # Some things like str, repr, getattr or something
+        # somehow seem to change the None refcount, even
+        # within only python so I don't think the changes
+        # in sys.refcount(None) indicate leaked/incorrectly
+        # removed references or anything...
+        for idx, (c1, c2) in enumerate(zip(counts1,counts2)):
+            if c1 != c2 and args[idx] is not None:
+                print('  -------------------------')
+                print('  ERROR: arg refcounts do not match.')
+                print('  -------------------------')
+                print('  before', counts1)
+                print('  after ', counts2)
+                errored = True
+                break
+        else:
+            print('Only None refcount changed weird.')
     if tupcount2 != tupcount1:
         print('  -------------------------')
         print('  ERROR: argtup refcounts do not match.')

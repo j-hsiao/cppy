@@ -32,6 +32,11 @@ namespace cppy {
 			key(std::forward<K>(key))
 		{}
 
+		template<class T> decltype(auto) operator[](T &&t)
+		{ return obj.getitem(key)[std::forward<T>(t)]; }
+		template<class T> decltype(auto) operator[](T &&t) const
+		{ return obj.getitem(key)[std::forward<T>(t)]; }
+
 		typedef decltype(obj.getitem(key)) Value;
 		ArrowWrap<Value> operator->() const { return { obj.getitem(key) }; }
 		operator Value() const { return obj.getitem(key); }
