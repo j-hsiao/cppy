@@ -104,6 +104,51 @@ PyObject* test_str(PyObject *m, PyObject *args_) {
 	CHECK(s.size() == 12)
 	CHECK(s.size_() == 12)
 	CHECK(s.slice(0,3) == "abc")
+
+	CHECK(s + s == "abc123def456abc123def456")
+	CHECK(s * 3 == "abc123def456abc123def456abc123def456")
+
+	CHECK(s.getitem(2).as<const char*&>() == "c")
+	CHECK(s.count("a") == 1)
+	CHECK(s.count("z") == 0)
+
+	CHECK(s.contains("abc123"))
+	CHECK(!s.contains("321"))
+	CHECK(s.index("d") == 6)
+	try {
+		s.index("z");
+		Py_RETURN_FALSE;
+	}
+	catch (cppy::Error &e) {
+		e.clear();
+	}
+
+	{
+		auto lst = s.list();
+		CHECK(lst.size() == s.size())
+		CHECK(lst.str() == "['a', 'b', 'c', '1', '2', '3', 'd', 'e', 'f', '4', '5', '6']")
+	}
+
+	{
+		auto tup = s.tuple();
+		CHECK(tup.size() == s.size())
+		CHECK(tup.str() == "('a', 'b', 'c', '1', '2', '3', 'd', 'e', 'f', '4', '5', '6')")
+	}
+
+	{
+		auto result = (s += s);
+		//str is immutable so += should not be in place.
+		CHECK(result.obj != s.obj)
+		CHECK(result == "abc123def456abc123def456")
+	}
+	{
+		auto result = (s *= 3);
+		//str is immutable so *= should not be in place.
+		CHECK(result.obj != s.obj)
+		CHECK(result == "abc123def456abc123def456abc123def456")
+	}
+
+
 	Py_RETURN_TRUE;
 }
 

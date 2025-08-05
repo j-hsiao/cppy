@@ -7,32 +7,40 @@
 #include <cppy/errors.hpp>
 #include <cppy/mixin/checkthrow.hpp>
 #include <cppy/mixin/sized.hpp>
+#include <cppy/proto/sequence.hpp>
 #include <cppy/util.hpp>
+#include <cppy/convert/int.hpp>
 
 #include <cstring>
 #include <string>
 #include <ostream>
 
-#if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
-	//PyUnicode_GET_LENGTH
-	//PyUnicode_GetLength
-	//PyUnicode_AsUTF8AndSize
-#else
-	//PyUnicode_GET_SIZE
-	//PyUnicode_GetSize
-	//PyUnicode_AsUTF8String
-#endif
-
-
 namespace cppy
 {
+	struct StringVersion {
+#		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
+	//		PyUnicode_GET_LENGTH
+	//		PyUnicode_GetLength
+	//		PyUnicode_AsUTF8AndSize
+	//		PyUnicode_AsUTF8
+	//		PyUnicode_Substring(obj, start, stop)
+#		else
+	//		PyUnicode_GET_SIZE
+	//		PyUnicode_GetSize
+	//		PyUnicode_AS_DATA (nothing to get data + size in one) (not checked...)
+	//		PySequence_GetItem?
+#		endif
+	};
+
 	template<> struct Object<const char*&>:
 		CheckThrow<Object<const char*&>>,
 		Sized<Object<const char*&>, PyUnicode_GetLength>,
+		Sequence<Object<const char*&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
 		using Sized<Object<const char*&>, PyUnicode_GetLength>::size;
+		using Sequence<Object<const char*&>>::getitem;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
@@ -50,6 +58,9 @@ namespace cppy
 			if (ret.data) { return ret; }
 			throw PyError();
 		};
+
+		template<class Start, class Stop>
+		Object<const char*> slice(Start &&start, Stop &&stop) const;
 
 		const char* c_str() const {
 			const char *ret = PyUnicode_AsUTF8(obj);
@@ -120,12 +131,18 @@ namespace cppy
 		Object(const std::string &s): Object(s.c_str(), static_cast<Py_ssize_t>(s.size())) {}
 	};
 
-	inline Object<const char*> Object<const char*&>::slice(Py_ssize_t start, Py_ssize_t stop) const {
+	template<class Start, class Stop>
+	inline Object<const char*> Object<const char*&>::slice(Start &&start, Stop &&stop) const {
 #		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
-			PyObject *ret = PyUnicode_Substring(obj, start, stop);
+			IntConverter<Object> cvt;
+			PyObject *ret = PyUnicode_Substring(
+				obj,
+				cvt(std::forward<Start>(start)),
+				cvt(std::forward<Stop>(stop)));
 			if (ret) { return Object<const char*>(ret); }
 			throw PyError();
 #		else
+			return sequence().slice(std::forward<Start>(start), std::forward<Stop>(stop));
 #		endif
 	}
 

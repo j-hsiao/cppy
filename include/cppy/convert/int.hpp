@@ -5,6 +5,7 @@
 #include <cppy/util.hpp>
 #include <type_traits>
 namespace cppy {
+	//any int
 	template<template<class> class Object>
 	struct IntConverter {
 		Py_ssize_t operator()(PyObject *obj) const
@@ -17,8 +18,7 @@ namespace cppy {
 			};
 
 			struct ConvertObject {
-				template<class T>
-				Py_ssize_t operator()(const Object<T> &obj) const
+				Py_ssize_t operator()(const Object<PyObject&> &obj) const
 				{ return Object<int&>(obj.obj); }
 				Py_ssize_t operator()(const Object<int&> &obj) const
 				{ return obj; }
@@ -44,6 +44,7 @@ namespace cppy {
 		}
 	};
 
+	// Has checking to ensure is an int...
 	template<template<class> class Object>
 	struct IndexConverter {
 		Py_ssize_t operator()(PyObject *obj) const
@@ -56,7 +57,7 @@ namespace cppy {
 			};
 
 			struct ConvertObject {
-				Py_ssize_t operator()(const Object<PyObject*&> &obj) const
+				Py_ssize_t operator()(const Object<PyObject&> &obj) const
 				{ return Object<int&>(obj.obj).checkthrow(); }
 				Py_ssize_t operator()(const Object<int&> &obj) const
 				{ return obj.checkthrow(); }

@@ -6,6 +6,7 @@
 #include <cppy/mixin/sized.hpp>
 #include <cppy/convert/int.hpp>
 #include <cppy/tuple.hpp>
+#include <cppy/proto/sequence.hpp>
 
 namespace cppy {
 	struct List_{};
@@ -147,6 +148,10 @@ namespace cppy {
 
 	inline Object<List_> Object<List_&>::slice(Py_ssize_t start, Py_ssize_t stop) const
 	{ return Object<List_>(success(PyList_GetSlice(obj, start, stop))); }
+
+	template<class T, template<class>class Object>
+	Object<List_> Sequence<Object<T&>>::list() const
+	{ return success(PySequence_List(static_cast<const Object<T&>*>(this)->obj)); }
 
 	typedef Object<List_> List;
 	typedef Object<List_&> ListRef;
