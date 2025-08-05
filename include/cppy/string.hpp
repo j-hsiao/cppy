@@ -14,13 +14,13 @@
 #include <ostream>
 
 #if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
-	PyUnicode_GET_LENGTH
-	PyUnicode_GetLength
-	PyUnicode_AsUTF8AndSize
+	//PyUnicode_GET_LENGTH
+	//PyUnicode_GetLength
+	//PyUnicode_AsUTF8AndSize
 #else
-	PyUnicode_GET_SIZE
-	PyUnicode_GetSize
-	PyUnicode_AsUTF8String
+	//PyUnicode_GET_SIZE
+	//PyUnicode_GetSize
+	//PyUnicode_AsUTF8String
 #endif
 
 
@@ -107,9 +107,6 @@ namespace cppy
 
 		Object<const char*> slice(Py_ssize_t start, Py_ssize_t stop) const;
 	};
-
-#else
-#endif
 
 	template<> struct Object<const char*>: Owned<const char*>
 	{
