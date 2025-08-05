@@ -56,6 +56,7 @@ def check(func, *args):
 
 if (
     check(testmodule.test_object, [slice(10,30)], (3.14, 101), "hello", None, MyThing())
+    or check(testmodule.test_str, 'abc123def456')
     or check(testmodule.test_tuple, [slice(10,30)], (3.14, 101), "hello", None)
     or check(testmodule.test_convert, 1,2,3,'a', 'b', 'c')
     or check(testmodule.test_list, 'abc', 123)

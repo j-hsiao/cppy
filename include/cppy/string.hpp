@@ -6,24 +6,38 @@
 #include <cppy/object.hpp>
 #include <cppy/errors.hpp>
 #include <cppy/mixin/checkthrow.hpp>
+#include <cppy/mixin/sized.hpp>
 #include <cppy/util.hpp>
 
 #include <cstring>
 #include <string>
 #include <ostream>
 
+#if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
+	PyUnicode_GET_LENGTH
+	PyUnicode_GetLength
+	PyUnicode_AsUTF8AndSize
+#else
+	PyUnicode_GET_SIZE
+	PyUnicode_GetSize
+	PyUnicode_AsUTF8String
+#endif
+
+
 namespace cppy
 {
 	template<> struct Object<const char*&>:
 		CheckThrow<Object<const char*&>>,
+		Sized<Object<const char*&>, PyUnicode_GetLength>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using Sized<Object<const char*&>, PyUnicode_GetLength>::size;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
 
-		std::size_t size() const { return PyUnicode_GET_LENGTH(obj); }
+		std::size_t size_() const { return PyUnicode_GET_LENGTH(obj); }
 
 		struct UTF8
 		{
@@ -52,6 +66,38 @@ namespace cppy
 			auto info = utf8();
 			return std::memcmp(info.data, s.c_str(), info.size) == 0;
 		}
+		bool operator>=(const char *s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s, info.size) >= 0;
+		}
+		bool operator>=(std::string &s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s.c_str(), info.size) >= 0;
+		}
+		bool operator<=(const char *s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s, info.size) <= 0;
+		}
+		bool operator<=(std::string &s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s.c_str(), info.size) <= 0;
+		}
+		bool operator>(const char *s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s, info.size) > 0;
+		}
+		bool operator>(std::string &s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s.c_str(), info.size) > 0;
+		}
+		bool operator<(const char *s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s, info.size) < 0;
+		}
+		bool operator<(std::string &s) const {
+			auto info = utf8();
+			return std::memcmp(info.data, s.c_str(), info.size) < 0;
+		}
 
 		std::string string() const {
 			UTF8 tmp = utf8();
@@ -61,9 +107,9 @@ namespace cppy
 
 		Object<const char*> slice(Py_ssize_t start, Py_ssize_t stop) const;
 	};
-	template<class V> bool operator==(V &&v, const Object<const char*&>&o) { return o == v; }
-	template<class V> bool operator!=(V &&v, const Object<const char*&>&o) { return !(o == v); }
-	template<class V> bool operator!=(const Object<const char*&>&o, V &&v) { return !(o == v); }
+
+#else
+#endif
 
 	template<> struct Object<const char*>: Owned<const char*>
 	{
@@ -77,24 +123,27 @@ namespace cppy
 		Object(const std::string &s): Object(s.c_str(), static_cast<Py_ssize_t>(s.size())) {}
 	};
 
+	inline Object<const char*> Object<const char*&>::slice(Py_ssize_t start, Py_ssize_t stop) const {
+#		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
+			PyObject *ret = PyUnicode_Substring(obj, start, stop);
+			if (ret) { return Object<const char*>(ret); }
+			throw PyError();
+#		else
+#		endif
+	}
+
+	template<class V> bool operator==(V &&v, const Object<const char*&>&o) { return o == v; }
+	template<class V> bool operator!=(const Object<const char*&>&o, V &&v) { return !(o == v); }
+	template<class V> bool operator!=(V &&v, const Object<const char*&>&o) { return !(o == v); }
+	template<class V> bool operator<(V &&v, const Object<const char*&>&o) { return (o > v); }
+	template<class V> bool operator>(V &&v, const Object<const char*&>&o) { return (o < v); }
+	template<class V> bool operator<=(V &&v, const Object<const char*&>&o) { return (o >= v); }
+	template<class V> bool operator>=(V &&v, const Object<const char*&>&o) { return (o <= v); }
+
 	//string literal
 	template<std::size_t N>
 	struct Object<const char (&)[N]>: Object<const char*>
 	{ using Object<const char*>::Object; };
-
-
-	inline Object<const char*> Object<const char*&>::slice(Py_ssize_t start, Py_ssize_t stop) const {
-#		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 3
-		PyObject *ret = PyUnicode_Substring(obj, start, stop);
-		if (ret) { return Object<const char*>(ret); }
-		throw PyError();
-#		else
-		// TODO
-		static_assert(false, "NOT YET IMPLEMENTED");
-#		endif
-	}
-
-
 
 	//------------------------------
 	//generic object methods that return strs
@@ -103,7 +152,6 @@ namespace cppy
 	{ return Object<const char*>(success(PyObject_Repr(obj))); }
 	Object<const char*> Object<>::str() const
 	{ return Object<const char*>(success(PyObject_Str(obj))); }
-
 
 	//------------------------------
 	//operator<< for ostream

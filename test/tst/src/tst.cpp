@@ -66,6 +66,9 @@ PyObject* test_convert(PyObject *m, PyObject *args_) {
 		CHECK(3.14 == floatfromdouble)
 		CHECK(32.4f == floatfromfloat)
 		CHECK(3 == floatfromint)
+		CHECK(floatfromdouble == 3.14)
+		CHECK(floatfromfloat == 32.4f)
+		CHECK(floatfromint == 3)
 	}
 	{
 		cppy::Object<int> intfromdouble(3.14);
@@ -84,7 +87,23 @@ PyObject* test_convert(PyObject *m, PyObject *args_) {
 		CHECK(3.0 == intfromdouble)
 		CHECK(4.0 == intfromfloat)
 		CHECK(2.0 == intfromint)
+		CHECK(intfromdouble == 3)
+		CHECK(intfromfloat == 4)
+		CHECK(intfromint == 2)
+		CHECK(intfromdouble == 3.0)
+		CHECK(intfromfloat == 4.0)
+		CHECK(intfromint == 2.0)
 	}
+	Py_RETURN_TRUE;
+}
+
+PyObject* test_str(PyObject *m, PyObject *args_) {
+	cppy::TupleRef args(args_);
+	auto s = args[0]->as<const char*&>();
+	CHECK(s == "abc123def456")
+	CHECK(s.size() == 12)
+	CHECK(s.size_() == 12)
+	CHECK(s.slice(0,3) == "abc")
 	Py_RETURN_TRUE;
 }
 
@@ -339,6 +358,7 @@ PyMODINIT_FUNC PyInit_testmodule()
 		{"test_convert", test_convert, METH_VARARGS, "test some conversion operators."},
 		{"test_list", test_list, METH_VARARGS, "Test list."},
 		{"test_dict", test_dict, METH_VARARGS, "Test dict."},
+		{"test_str", test_str, METH_VARARGS, "Test str."},
 		{}
 	};
 
