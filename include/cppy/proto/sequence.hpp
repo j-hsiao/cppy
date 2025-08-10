@@ -2,8 +2,8 @@
 #ifndef CPPY_PROTO_SEQUENCE_HPP
 #define CPPY_PROTO_SEQUENCE_HPP
 #include <cppy/errors.hpp>
-#include <cppy/object.hpp>
 #include <cppy/mixin/checkthrow.hpp>
+#include <cppy/mixin/sized.hpp>
 #include <cppy/convert/int.hpp>
 #include <cppy/convert/pyobject.hpp>
 #include <type_traits>
@@ -17,22 +17,18 @@ namespace cppy {
 
 
 	template<class T, template<class>class Object>
-	struct PySequence<Object<T&>>: CheckThrow<PySequence<Object<T&>>> {
+	struct PySequence<Object<T&>>:
+		CheckThrow<PySequence<Object<T&>>>,
+		Sized<Object<T&>, PySequence_Size>
+	{
 		using Base = Object<T&>;
 
-		PySequence<Object<T&>>&& sequence() && { return std::move(*this); }
-		PySequence<Object<T&>>& sequence() & { return *this; }
-		const PySequence<Object<T&>>& sequence() const& { return *this; }
+		PySequence<Base>&& sequence() && { return std::move(*this); }
+		PySequence<Base>& sequence() & { return *this; }
+		const PySequence<Base>& sequence() const& { return *this; }
 
 		bool check() const
 		{ return PySequence_Check(static_cast<const Base*>(this)->obj); }
-
-		Py_ssize_t size() const
-		{
-			Py_ssize_t length = PySequence_Size(static_cast<const Base*>(this)->obj);
-			if (length < 0) { throw PyError(); }
-			return length;
-		}
 
 		//------------------------------
 		// +
@@ -94,7 +90,7 @@ namespace cppy {
 			return Object<PyObject>(success(item));
 		}
 		template<class Idx, class Actual>
-		Object<T&>& setitem(Idx &&idx, Actual &&actual) {
+		Base& setitem(Idx &&idx, Actual &&actual) {
 			if (PySequence_SetItem(
 				static_cast<Base*>(this)->obj,
 				IntConverter<Object>{}(std::forward<Idx>(idx)),
@@ -103,7 +99,7 @@ namespace cppy {
 			return *this;
 		}
 		template<class Idx>
-		Object<T&>& delitem(Idx &&idx) {
+		Base& delitem(Idx &&idx) {
 			if (PySequence_SetItem(
 				static_cast<Base*>(this)->obj,
 				IntConverter<Object>{}(std::forward<Idx>(idx))))
@@ -125,7 +121,7 @@ namespace cppy {
 		}
 
 		template<class Start, class Stop, class Seq>
-		Object<T&>& setslice(Start &&start, Stop &&stop, Seq &&seq) {
+		Base& setslice(Start &&start, Stop &&stop, Seq &&seq) {
 			IntConverter<Object> icvt;
 			if (PySequence_SetSlice(
 				static_cast<Base*>(this)->obj,
@@ -137,7 +133,7 @@ namespace cppy {
 		}
 
 		template<class Start, class Stop>
-		Object<T&>& delslice(Start &&start, Stop &&stop) {
+		Base& delslice(Start &&start, Stop &&stop) {
 			IntConverter<Object> icvt;
 			if (PySequence_DelSlice(
 				static_cast<Base*>(this)->obj,

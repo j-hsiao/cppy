@@ -17,5 +17,6 @@ namespace cppy {
 			return ret;
 		}
 	};
+
 }
 #endif//CPPY_MIXIN_SIZED_HPP
