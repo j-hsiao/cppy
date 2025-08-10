@@ -126,14 +126,8 @@ namespace cppy {
 
 		template<class T> PyObject* operator()(T &&t) const
 		{ return Converter<T>{}(std::forward<T>(t)); }
+
 	};
-
-	//Move from argument, even if lvalue ref.
-	template<template<class> class Object>
-	struct MoveConverter {
-	};
-
-
 
 }
 #endif//CPPY_CONVERT_PYOBJECT_HPP

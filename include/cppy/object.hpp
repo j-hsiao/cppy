@@ -72,11 +72,28 @@ namespace cppy
 
 		//__setitem__
 		template<class Key, class Val>
-		void setitem(Key &&key, Val &&val) {
+		Object<>& setitem(Key &&key, Val &&val) {
 			PyObjectConverter<Object> cvt;
 			if (PyObject_SetItem(obj, cvt(key), cvt(val)) == -1)
 			{ throw PyError(); }
+			return *this;
 		}
+
+		//__delitem__
+		template<class Key>
+		Object<>& delitem(Key &&key) {
+			if (PyObject_DelItem(
+				obj, PyObjectConverter<Object>{}(std::forward<Key>(key))) == -1)
+			{ throw PyError(); }
+			return *this;
+		}
+
+		Object<>& delitem(const char *key) {
+			if (PyObject_DelItem(obj, key) == -1)
+			{ throw PyError(); }
+			return *this;
+		}
+
 
 		explicit operator bool() const {
 			int result = PyObject_IsTrue(obj);

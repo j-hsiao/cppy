@@ -9,7 +9,7 @@ namespace cppy  {
 
 
 	template<class T, template<class>class Object>
-	struct PyMapping:
+	struct PyMapping<Object<T&>>:
 		CheckThrow<PyMapping<Object<T&>>>,
 		Sized<Object<T&>, PyMapping_Size>
 	{
@@ -27,37 +27,102 @@ namespace cppy  {
 		//get item
 		//------------------------------
 		//raw PyObject* or NULL, null means error occurred
-		template<class Key>
-		PyObject* getitem_(Key &&key) const {
-			return PyObject_GetItem(
-				static_cast<const Base*>(this)->obj,
-				PyObjectConverter<Object>{}(std::forward<Key>(key)));
-		}
-		PyObject* getitem_(const char *key) const
-		{ return PyMapping_GetItemString(static_cast<const Base*>(this)->obj, key); }
+		private:
+			template<class Key>
+			PyObject* getitem_(Key &&key) const {
+				return PyObject_GetItem(
+					static_cast<const Base*>(this)->obj,
+					PyObjectConverter<Object>{}(std::forward<Key>(key)));
+			}
+			PyObject* getitem_(const char *key) const
+			{ return PyMapping_GetItemString(static_cast<const Base*>(this)->obj, key); }
 
-		template<class Key>
-		Object<PyObject> getitem(Key &&key) const {
-			auto ret = getitem_(std::forward<Key>(key));
-			if (ret) { return Object<PyObject>(ret); }
-			throw PyError();
-		}
+#			if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13
+			template<class Key>
+			PyObject* getitem_opt(Key &&key) const {
+				PyObject *ret;
+				if (
+					PyObject_GetOptionalItem(
+						static_cast<const Base*>(this)->obj,
+						PyObjectConverter<Object>{}(std::forward<Key>(key)),
+						&ret) < 0)
+				{ throw PyError(); }
+				rturn ret;
+			}
 
-		template<class Key, class Default>
-		Object<PyObject> getitem(Key &&key, Default &&dval) {
-			if (PyObject *ptr = getitem_(std::forard<Key>(key)))
-			{ return Object<PyObject>(ptr); }
-			else
-			{ return Object<PyObject>(StealConverter<Object>{}(std::forward<Default>(dval))); }
-		}
+			PyObject* getitem_opt(const char *key) const {
+				PyObject *ret;
+				if (
+					PyObject_GetOptionalItemString(
+						static_cast<const Base*>(this)->obj, key, &ret) < 0)
+				{ throw PyError(); }
+				rturn ret;
+			}
+#			endif
 
-		template<class Key>
-		Object<PyObject> getitem(Key &&key, std::nullptr_t) {
-			if (PyObject *ptr = getitem_(std::forward<Key>(key)))
-			{ return Object<PyObject>(ptr); }
-			else
-			{ return Object<PyObject>(nullptr); }
-		}
+		public:
+			template<class Key>
+			Object<PyObject> getitem(Key &&key) const {
+				auto ret = getitem_(std::forward<Key>(key));
+				if (ret) { return Object<PyObject>(ret); }
+				throw PyError();
+			}
 
+			template<class Key, class Default>
+			Object<PyObject> getitem(Key &&key, Default &&dval) {
+#				if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13
+					if (PyObject *ptr = getitem_opt(std::forward<Key>(key)))
+					{ return Object<PyObject>(ptr); }
+#				else
+					if (PyObject *ptr = getitem_(std::forard<Key>(key)))
+					{ return Object<PyObject>(ptr); }
+					else
+					{ PyErr_Clear(); }
+#				endif
+				return Object<PyObject>(StealConverter<Object>{}(std::forward<Default>(dval)));
+			}
+
+			template<class Key>
+			Object<PyObject> getitem(Key &&key, std::nullptr_t) {
+#				if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13
+					if (PyObject *ptr = getitem_opt(std::forward<Key>(key)))
+					{ return Object<PyObject>(ptr); }
+#				else
+					if (PyObject *ptr = getitem_(std::forard<Key>(key)))
+					{ return Object<PyObject>(ptr); }
+					else
+					{ PyErr_Clear(); }
+#				endif
+				return Object<PyObject>(nullptr);
+			}
+
+			//------------------------------
+			//setitem with const char*
+			//------------------------------
+			template<class Value>
+			PyMapping<Object<T&>> setitem(const char *key, Value &&value) {
+				if (PyMapping_SetItemString(
+						static_cast<Base*>(this)->obj, key,
+						PyObjectConverter<Object>{}(std::forward<Value>(value))) == -1)
+				{ throw PyError(); }
+				return *this;
+			}
+
+			//------------------------------
+			//delitem
+			//------------------------------
+			PyMapping<Object<T&>> delitem(const char *key) {
+				if (PyMapping_DelItemString(static_cast<Base*>(this)->obj, key) == -1)
+				{ throw PyError(); }
+				return *this;
+			}
+			template<class Key>
+			PyMapping<Object<T&>> delitem(Key &&key) {
+				if (PyMapping_DelItemString(
+					static_cast<Base*>(this)->obj,
+					PyObjectConverter<Object>{}(std::forward<Key>(key))) == -1)
+				{ throw PyError(); }
+				return *this;
+			}
 	};
 }
