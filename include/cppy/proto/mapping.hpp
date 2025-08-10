@@ -23,6 +23,10 @@ namespace cppy  {
 		{ return PyMapping_Check(static_cast<const Base*>(this)->obj); }
 
 
+		//------------------------------
+		//get item
+		//------------------------------
+		//raw PyObject* or NULL, null means error occurred
 		template<class Key>
 		PyObject* getitem_(Key &&key) const {
 			return PyObject_GetItem(
@@ -41,6 +45,10 @@ namespace cppy  {
 
 		template<class Key, class Default>
 		Object<PyObject> getitem(Key &&key, Default &&dval) {
+			if (PyObject *ptr = getitem_(std::forard<Key>(key)))
+			{ return Object<PyObject>(ptr); }
+			else
+			{ return Object<PyObject>(StealConverter<Object>{}(std::forward<Default>(dval))); }
 		}
 
 		template<class Key>
