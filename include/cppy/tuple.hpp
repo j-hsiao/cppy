@@ -6,6 +6,7 @@
 #include <cppy/mixin/mapping.hpp>
 #include <cppy/mixin/checkthrow.hpp>
 #include <cppy/mixin/sized.hpp>
+#include <cppy/proto/sequence.hpp>
 #include <cppy/convert/int.hpp>
 
 #include <utility>
@@ -18,6 +19,7 @@ namespace cppy
 		CheckThrow<Object<Tuple_&>>,
 		Mapping<Object<Tuple_&>>,
 		Sized<Object<Tuple_&>, PyTuple_Size>,
+		PySequence<Object<Tuple_&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
@@ -89,7 +91,7 @@ namespace cppy
 	{ return Object<Tuple_>(success(PyTuple_GetSlice(obj, start, stop))); }
 
 	template<class T, template<class>class Object>
-	Object<Tuple_> Sequence<Object<T&>>::tuple() const
+	Object<Tuple_> PySequence<Object<T&>>::tuple() const
 	{ return success(PySequence_Tuple(static_cast<const Object<T&>*>(this)->obj)); }
 
 	typedef Object<Tuple_> Tuple;

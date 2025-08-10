@@ -15,6 +15,7 @@ namespace cppy {
 		CheckThrow<Object<List_&>>,
 		Mapping<Object<List_&>>,
 		Sized<Object<List_&>, PyList_Size>,
+		PySequence<Object<List_&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
@@ -150,7 +151,7 @@ namespace cppy {
 	{ return Object<List_>(success(PyList_GetSlice(obj, start, stop))); }
 
 	template<class T, template<class>class Object>
-	Object<List_> Sequence<Object<T&>>::list() const
+	Object<List_> PySequence<Object<T&>>::list() const
 	{ return success(PySequence_List(static_cast<const Object<T&>*>(this)->obj)); }
 
 	typedef Object<List_> List;

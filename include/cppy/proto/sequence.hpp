@@ -10,19 +10,19 @@
 
 
 namespace cppy {
-	template<class Base> struct Sequence;
+	template<class Base> struct PySequence;
 
 	struct List_;
 	struct Tuple_;
 
 
 	template<class T, template<class>class Object>
-	struct Sequence<Object<T&>>: CheckThrow<Sequence<Object<T&>>> {
+	struct PySequence<Object<T&>>: CheckThrow<PySequence<Object<T&>>> {
 		using Base = Object<T&>;
 
-		Sequence<Object<T&>>&& sequence() && { return std::move(*this); }
-		Sequence<Object<T&>>& sequence() & { return *this; }
-		const Sequence<Object<T&>>& sequence() const& { return *this; }
+		PySequence<Object<T&>>&& sequence() && { return std::move(*this); }
+		PySequence<Object<T&>>& sequence() & { return *this; }
+		const PySequence<Object<T&>>& sequence() const& { return *this; }
 
 		bool check() const
 		{ return PySequence_Check(static_cast<const Base*>(this)->obj); }
@@ -139,7 +139,7 @@ namespace cppy {
 		template<class Start, class Stop>
 		Object<T&>& delslice(Start &&start, Stop &&stop) {
 			IntConverter<Object> icvt;
-			if (PySequence_delSlice(
+			if (PySequence_DelSlice(
 				static_cast<Base*>(this)->obj,
 				icvt(std::forward<Start>(start)),
 				icvt(std::forward<Stop>(stop))))

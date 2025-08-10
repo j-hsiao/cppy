@@ -35,12 +35,12 @@ namespace cppy
 	template<> struct Object<const char*&>:
 		CheckThrow<Object<const char*&>>,
 		Sized<Object<const char*&>, PyUnicode_GetLength>,
-		Sequence<Object<const char*&>>,
+		PySequence<Object<const char*&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
 		using Sized<Object<const char*&>, PyUnicode_GetLength>::size;
-		using Sequence<Object<const char*&>>::getitem;
+		using PySequence<Object<const char*&>>::getitem;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
