@@ -42,7 +42,7 @@ namespace cppy  {
 			PyObject* getitem_opt(Key &&key) const {
 				PyObject *ret;
 				if (
-					PyObject_GetOptionalItem(
+					PyMapping_GetOptionalItem(
 						static_cast<const Base*>(this)->obj,
 						PyObjectConverter<Object>{}(std::forward<Key>(key)),
 						&ret) < 0)
@@ -53,7 +53,7 @@ namespace cppy  {
 			PyObject* getitem_opt(const char *key) const {
 				PyObject *ret;
 				if (
-					PyObject_GetOptionalItemString(
+					PyMapping_GetOptionalItemString(
 						static_cast<const Base*>(this)->obj, key, &ret) < 0)
 				{ throw PyError(); }
 				rturn ret;
@@ -99,8 +99,25 @@ namespace cppy  {
 			//------------------------------
 			//setitem with const char*
 			//------------------------------
-			template<class Value>
-			PyMapping<Object<T&>> setitem(const char *key, Value &&value) {
+			private:
+				template<class Value>
+				int setitem_(const char *key, Value &&value) {
+					return PyMapping_SetItemString(
+						static_cast<Base*>(this)->obj, key,
+						PyObjectConverter<Object>{}(std::forward<Value>(value)));
+				}
+				template<class Key, class Value>
+				int setitem_(Key &&key, Value &&value) {
+					PyObjectConverter<Object> cvt;
+					return PyObject_SetItemString(
+						static_cast<Base*>(this)->obj,
+						cvt(std::forward<Key>(key)),
+						cvt(std::forward<Value>(value)));
+				}
+
+			public:
+			template<class Key, class Value>
+			PyMapping<Object<T&>> setitem_(Key &&key, Value &&value) {
 				if (PyMapping_SetItemString(
 						static_cast<Base*>(this)->obj, key,
 						PyObjectConverter<Object>{}(std::forward<Value>(value))) == -1)
