@@ -29,6 +29,7 @@
 #include <iostream> //
 namespace cppy
 {
+	struct List_;
 	//------------------------------
 	//Generic base python object and methods.
 	//------------------------------
@@ -140,6 +141,25 @@ namespace cppy
 				return *this;
 			}
 
+		bool is_subclass(PyObject *cls) const {
+			int ret = PyObject_IsSubclass(obj, cls);
+			if (ret == -1) { throw PyError(); }
+			return ret;
+		}
+		bool is_instance(PyObject *cls) const {
+			int ret = PyObject_IsInstance(obj, cls);
+			if (ret == -1) { throw PyError(); }
+			return ret;
+		}
+		bool is_instance(PyTypeObject* cls) const
+		{ return Py_IS_TYPE(obj, cls); }
+
+		PyTypeObject* type() const {
+			PyTypeObject *ret = Py_TYPE(obj);
+			if (!ret) { throw PyError(); }
+			return ret;
+		}
+
 		//__getitem__ (const)
 		template<class T>
 		Object<PyObject> getitem(T &&t) const;
@@ -173,6 +193,9 @@ namespace cppy
 
 		template<class T>
 		Object<T> as() const { return Object<T>(*this); }
+
+		//dir
+		Object<List_> dir() const;
 	};
 
 	//Intermediate for copy constructors from borrowed refs.

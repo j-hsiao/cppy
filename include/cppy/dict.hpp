@@ -5,6 +5,7 @@
 #include <cppy/errors.hpp>
 #include <cppy/mixin/checkthrow.hpp>
 #include <cppy/mixin/mapping.hpp>
+#include <cppy/proto/mapping.hpp>
 #include <cppy/string.hpp>
 #include <cppy/convert/pyobject.hpp>
 #include <cppy/util.hpp>
@@ -18,6 +19,7 @@ namespace cppy
 	template<> struct Object<Dict_&>:
 		CheckThrow<Object<Dict_&>>,
 		Mapping<Object<Dict_&>>,
+		PyMapping<Object<Dict_&>>,
 		Sized<Object<Dict_&>, PyDict_Size>,
 		Borrowed
 	{

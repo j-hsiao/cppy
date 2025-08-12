@@ -154,6 +154,13 @@ namespace cppy {
 	Object<List_> PySequence<Object<T&>>::list() const
 	{ return success(PySequence_List(static_cast<const Object<T&>*>(this)->obj)); }
 
+	inline Object<List_> Object<>::dir() const {
+		PyObject *ret = PyObject_Dir(obj);
+		if (ret) { return Object<List_>(ret); }
+		else if (PyErr_Occurred()) { throw PyError(); }
+		else { return Object<List_>{}; }
+	}
+
 	typedef Object<List_> List;
 	typedef Object<List_&> ListRef;
 }

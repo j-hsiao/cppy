@@ -74,7 +74,7 @@ namespace cppy  {
 					if (PyObject *ptr = getitem_opt(std::forward<Key>(key)))
 					{ return Object<PyObject>(ptr); }
 #				else
-					if (PyObject *ptr = getitem_(std::forard<Key>(key)))
+					if (PyObject *ptr = getitem_(std::forward<Key>(key)))
 					{ return Object<PyObject>(ptr); }
 					else
 					{ PyErr_Clear(); }
@@ -88,7 +88,7 @@ namespace cppy  {
 					if (PyObject *ptr = getitem_opt(std::forward<Key>(key)))
 					{ return Object<PyObject>(ptr); }
 #				else
-					if (PyObject *ptr = getitem_(std::forard<Key>(key)))
+					if (PyObject *ptr = getitem_(std::forward<Key>(key)))
 					{ return Object<PyObject>(ptr); }
 					else
 					{ PyErr_Clear(); }

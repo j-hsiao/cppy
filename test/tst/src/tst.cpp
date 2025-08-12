@@ -350,6 +350,18 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		obj[0] = 32;
 		CHECK(obj.str() == "[32, 2, 3]")
 	}
+
+	{
+		iout << "------------------------------" << std::endl
+		     << "dir" << std::endl;
+		cppy::Object<> args(args_);
+		CHECK(args[4]->dir().contains("name"))
+
+		iout << "------------------------------" << std::endl
+		     << "isinstance" << std::endl;
+		CHECK(args.is_instance(&PyTuple_Type))
+		CHECK(args.is_instance(args.type()))
+	}
 	Py_RETURN_TRUE;
 }
 
