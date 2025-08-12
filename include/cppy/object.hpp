@@ -99,6 +99,47 @@ namespace cppy
 			template<class Name>
 			Object<PyObject> attr(Name &&name, std::nullptr_t) const;
 
+		//setattr()
+		private:
+			template<class Value>
+			int setattr_(const char *name, Value &&value) {
+				return PyObject_SetAttrString(
+					obj, name, PyObjectConverter<Object>{}(std::forward<Value>(value)));
+			}
+			template<class Name, class Value>
+			int setattr_(Name &&name, Value &&value) {
+				PyObjectConverter<Object> cvt;
+				return PyObject_SetAttr(
+					obj, cvt(std::forward<Name>(name)), cvt(std::forward<Value>(value)));
+			}
+		public:
+			template<class Name, class Value>
+			Object<>& setattr(Name &&name, Value &&value) {
+				if (setattr_(std::forward<Name>(name), std::forward<Value>(value)))
+				{ throw PyError(); }
+				return *this;
+			}
+
+		//delattr
+		private:
+#			if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13
+			int delattr_(const char *name)
+			{ return PyObject_DelAttrString(obj, name); }
+			template<class Name> int delattr_(Name &&name)
+			{ return PyObject_DelAttr(obj, PyObjectConverter<Object>{}(std::forward<Name>(name))); }
+#			else
+			int delattr_(const char *name)
+			{ return PyObject_SetAttrString(obj, name, NULL); }
+			template<class Name> int delattr_(Name &&name)
+			{ return PyObject_SetAttr(obj, PyObjectConverter<Object>{}(std::forward<Name>(name)), NULL); }
+#			endif
+		public:
+			template<class Name>
+			Object<>& delattr(Name &&name) {
+				if (delattr_(std::forward<Name>(name))) { throw PyError(); }
+				return *this;
+			}
+
 		//__getitem__ (const)
 		template<class T>
 		Object<PyObject> getitem(T &&t) const;

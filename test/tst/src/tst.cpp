@@ -320,6 +320,25 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		CHECK(args.getitem(4).attr("name").as<const char*&>() == "MyThing")
 		CHECK(args[4]->attr("notanattr", nullptr).obj == nullptr)
 		CHECK(args[4]->attr("notanattr", 32).as<int&>() == 32)
+
+		iout << "------------------------------" << std::endl
+		     << "setattr" << std::endl;
+		CHECK(args[4]->setattr("me", args[4]->obj).attr("me").obj == args[4]->obj)
+		CHECK(args[4]->setattr("newattr", "newattr").attr("newattr").as<const char*&>() == "newattr")
+
+		iout << "------------------------------" << std::endl
+		     << "delattr" << std::endl;
+		CHECK(args[4]->delattr("me").attr("me", nullptr).obj == nullptr)
+		CHECK(args[4]->delattr("newattr").attr("newattr", nullptr).obj == nullptr)
+
+		try {
+			iout << "  args[4]->delattr(\"notanattr\") (nonexistant)" << std::endl;
+			args[4]->delattr("notanattr");
+			Py_RETURN_FALSE;
+		}
+		catch (cppy::Error &e) {
+			e.clear();
+		}
 	}
 
 	{
