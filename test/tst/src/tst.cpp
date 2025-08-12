@@ -364,14 +364,19 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 
 		iout << "------------------------------" << std::endl
 		     << "iter" << std::endl;
-		int sz = args.size();
 		int tot = 0;
 		auto it = args.getiter();
 		CHECK(it.obj)
 		while (it.next().obj) {
 			++tot;
 		}
-		CHECK(tot == sz)
+		CHECK(tot == args.size())
+
+		tot = 0;
+		for (auto item: args) {
+			++tot;
+		}
+		CHECK(tot == args.size())
 	}
 
 	Py_RETURN_TRUE;

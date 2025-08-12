@@ -48,6 +48,12 @@ namespace cppy
 		//No references to temporaries.
 		Object(Object<PyObject> &&o) = delete;
 
+		Object& operator=(const Object &o) {
+			obj = o.obj;
+			return *this;
+		}
+		Object& operator=(Object &&o) = delete;
+
 		const Object& object() const& { return *this; }
 		Object& object() & { return *this; }
 		Object&& object() && { return static_cast<Object&&>(*this); }
@@ -188,6 +194,9 @@ namespace cppy
 				return *this;
 			}
 
+		Iterator<Object> begin() const;
+		Iterator<Object> end() const;
+
 		Object<PyObject> getiter() const;
 
 		explicit operator bool() const {
@@ -218,11 +227,25 @@ namespace cppy
 		using Base::Base;
 
 		Owned(const Owned &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
-		Owned(Owned &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
-
 		Owned(const Object<> &o) noexcept: Base(o.obj) { Py_INCREF(o.obj); }
+
+		Owned(Owned &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
 		template<class OActual>
 		Owned(Owned<OActual> &&o) noexcept: Base(o.obj) { o.obj = nullptr; }
+
+		template<class OActual>
+		Owned& operator=(Owned<OActual> &&o) noexcept {
+			Py_XDECREF(this->obj);
+			this->obj = o.ret();
+			return *this;
+		}
+		template<class OActual>
+		Owned& operator=(const Object<OActual&> &o) noexcept {
+			Py_XDECREF(this->obj);
+			this->obj = o.obj;
+			Py_XINCREF(this->obj);
+			return *this;
+		}
 
 		using Object<>::ret;
 		PyObject* ret() {
@@ -261,6 +284,12 @@ namespace cppy
 		if (!ret) { throw PyError(); }
 		return Object<PyObject>(ret);
 	}
+
+	Iterator<Object> Object<>::begin() const {
+		return Iterator<Object>(success(PyObject_GetIter(obj)));
+	}
+	Iterator<Object> Object<>::end() const
+	{ return Iterator<Object>(); }
 
 	//get iterator
 	inline Object<PyObject> Object<>::getiter() const

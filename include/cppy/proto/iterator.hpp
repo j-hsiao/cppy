@@ -5,6 +5,36 @@
 #include <cppy/mixin/checkthrow.hpp>
 
 namespace cppy {
+	template<template<class>class Object>
+	struct Iterator {
+		PyObject *pyit;
+		Object<PyObject> obj;
+
+		Iterator():
+			pyit(nullptr),
+			obj()
+		{}
+
+		Iterator(PyObject *pyit):
+			pyit(pyit),
+			obj(PyIter_Next(pyit))
+		{}
+
+		Object<PyObject>& operator*() { return obj; }
+
+		bool operator==(const Iterator &it)
+		{ return it.obj.obj == obj.obj; }
+		bool operator!=(const Iterator &it)
+		{ return it.obj.obj != obj.obj; }
+
+		Iterator& operator++() {
+			obj = Object<PyObject>(PyIter_Next(pyit));
+			if (!obj.obj && PyErr_Occurred()) { throw PyError(); }
+			return *this;
+		}
+	};
+
+
 	template<class Base> struct PyIterator;
 	template<class Base> struct PyAIterator;
 
