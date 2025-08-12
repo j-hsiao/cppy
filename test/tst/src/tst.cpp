@@ -318,6 +318,8 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		     << "getattr" << std::endl;
 		CHECK(args[4]->attr("value").as<int&>() == 32)
 		CHECK(args.getitem(4).attr("name").as<const char*&>() == "MyThing")
+		CHECK(args[4]->attr("notanattr", nullptr).obj == nullptr)
+		CHECK(args[4]->attr("notanattr", 32).as<int&>() == 32)
 	}
 
 	{
@@ -391,18 +393,6 @@ PyObject* test_dict(PyObject *m, PyObject *args_) {
 		Py_RETURN_FALSE;
 	}
 	catch (cppy::Error &e) { e.clear(); }
-
-
-	{
-		PyObject *p = PyMapping_GetItemString(dct.obj, "jfewiojfosjasf");
-		std::cout << static_cast<bool>(p) << std::endl;
-
-		if (PyErr_Occurred()) {
-			std::cout << "error occurred." << std::endl;
-			PyErr_Clear();
-		}
-	}
-
 	Py_RETURN_TRUE;
 }
 

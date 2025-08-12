@@ -26,6 +26,7 @@
 
 #include <type_traits>
 
+#include <iostream> //
 namespace cppy
 {
 	//------------------------------
@@ -64,7 +65,39 @@ namespace cppy
 		Object<const char*> str() const;
 
 		//getattr()
-		Object<PyObject> attr(const char *attr_name) const;
+		private:
+			PyObject *attr_(const char *attrname) const
+			{ return PyObject_GetAttrString(obj, attrname); }
+			template<class Name> PyObject *attr_(Name &&attrname) const
+			{ return PyObject_GetAttrString(obj, PyObjectConverter<Object>{}(std::forward<Name>(attrname))); }
+
+#		if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13
+			int attr_noexc(const char *attrname, PyObject **ptr) const
+			{ return PyObject_GetOptionalAttrString(obj, attrname, ptr); }
+			template<class Name> int attr_noexc(Name &&attrname, **ptr) const
+			{ return PyObject_GetOptionalAttrString(obj, PyObjectConverter<Object>{}(std::forward<Name>(attrname)), ptr); }
+			template<class Name>
+			PyObject* attr_noexc(Name &&name) const {
+				PyObject *ret;
+				int result = attr_noexc(std::forward<Name>(name), &ret);
+				if (result < 0) { throw PyError(); }
+				return ret;
+			}
+#		else
+			template<class Name>
+			PyObject* attr_noexc(Name &&name) const {
+				PyObject *ret = attr_(std::forward<Name>(name));
+				if (!ret) { PyErr_Clear(); }
+				return ret;
+			}
+#		endif
+		public:
+			template<class Name>
+			Object<PyObject> attr(Name &&name) const;
+			template<class Name, class Default>
+			Object<PyObject> attr(Name &&name, Default &&value) const;
+			template<class Name>
+			Object<PyObject> attr(Name &&name, std::nullptr_t) const;
 
 		//__getitem__ (const)
 		template<class T>
@@ -78,22 +111,17 @@ namespace cppy
 			{ throw PyError(); }
 			return *this;
 		}
-
 		//__delitem__
-		template<class Key>
-		Object<>& delitem(Key &&key) {
-			if (PyObject_DelItem(
-				obj, PyObjectConverter<Object>{}(std::forward<Key>(key))) == -1)
-			{ throw PyError(); }
-			return *this;
-		}
-
-		Object<>& delitem(const char *key) {
-			if (PyObject_DelItem(obj, key) == -1)
-			{ throw PyError(); }
-			return *this;
-		}
-
+		private:
+			template<class Key> int delitem_(Key &&key)
+			{ return PyObject_DelItem(obj, PyObjectConverter<Object>{}(std::forward<Key>(key))); }
+			int delitem_(const char *key)
+			{ return PyObject_DelItemString(obj, key); }
+		public:
+			template<class Key> Object<>& delitem(Key &&key) {
+				if (delitem_(std::forward<Key>(key))) { throw PyError(); }
+				return *this;
+			}
 
 		explicit operator bool() const {
 			int result = PyObject_IsTrue(obj);
@@ -139,11 +167,20 @@ namespace cppy
 	template<> struct Object<PyObject>: Owned<PyObject> { using Owned<PyObject>::Owned; };
 
 	//getattr
-	inline Object<PyObject> Object<>::attr(const char *attr_name) const
-	{
-		PyObject *ret = PyObject_GetAttrString(obj, attr_name);
-		if (!ret) { throw PyError(); }
-		return Object<PyObject>(ret);
+	template<class Name>
+	Object<PyObject> Object<>::attr(Name &&name) const {
+		if (PyObject *ret = attr_(std::forward<Name>(name))) { return Object<PyObject>(ret); }
+		throw PyError();
+	}
+	template<class Name, class Default>
+	Object<PyObject> Object<>::attr(Name &&name, Default &&value) const {
+		if (PyObject *ret = attr_noexc(std::forward<Name>(name))) { return Object<PyObject>(ret); }
+		return Object<PyObject>(StealConverter<Object>{}(std::forward<Default>(value)));
+	}
+	template<class Name>
+	Object<PyObject> Object<>::attr(Name &&name, std::nullptr_t) const {
+		if (PyObject *ret = attr_noexc(std::forward<Name>(name))) { return Object<PyObject>(ret); }
+		return Object<PyObject>(nullptr);
 	}
 
 	//const __getitem__
