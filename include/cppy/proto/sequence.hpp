@@ -6,7 +6,8 @@
 #include <cppy/mixin/sized.hpp>
 #include <cppy/convert/int.hpp>
 #include <cppy/convert/pyobject.hpp>
-#include <type_traits>
+
+#include <utility>
 
 
 namespace cppy {
@@ -14,7 +15,6 @@ namespace cppy {
 
 	struct List_;
 	struct Tuple_;
-
 
 	template<class T, template<class>class Object>
 	struct PySequence<Object<T&>>:

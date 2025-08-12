@@ -19,6 +19,7 @@
 #include <cppy/mixin/mapping.hpp>
 #include <cppy/mixin/sized.hpp>
 #include <cppy/convert/pyobject.hpp>
+#include <cppy/proto/iterator.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -26,7 +27,6 @@
 
 #include <type_traits>
 
-#include <iostream> //
 namespace cppy
 {
 	struct List_;
@@ -37,7 +37,8 @@ namespace cppy
 
 	template<> struct Object<PyObject&>:
 		Mapping<Object<>>,
-		Sized<Object<>, PyObject_Size>
+		Sized<Object<>, PyObject_Size>,
+		PyIterator<Object<PyObject&>>
 	{
 		PyObject *obj;
 
@@ -141,11 +142,13 @@ namespace cppy
 				return *this;
 			}
 
+		//issubclass
 		bool is_subclass(PyObject *cls) const {
 			int ret = PyObject_IsSubclass(obj, cls);
 			if (ret == -1) { throw PyError(); }
 			return ret;
 		}
+		//isinstance
 		bool is_instance(PyObject *cls) const {
 			int ret = PyObject_IsInstance(obj, cls);
 			if (ret == -1) { throw PyError(); }
@@ -154,6 +157,7 @@ namespace cppy
 		bool is_instance(PyTypeObject* cls) const
 		{ return Py_IS_TYPE(obj, cls); }
 
+		//type(obj)
 		PyTypeObject* type() const {
 			PyTypeObject *ret = Py_TYPE(obj);
 			if (!ret) { throw PyError(); }
@@ -183,6 +187,8 @@ namespace cppy
 				if (delitem_(std::forward<Key>(key))) { throw PyError(); }
 				return *this;
 			}
+
+		Object<PyObject> getiter() const;
 
 		explicit operator bool() const {
 			int result = PyObject_IsTrue(obj);
@@ -255,6 +261,10 @@ namespace cppy
 		if (!ret) { throw PyError(); }
 		return Object<PyObject>(ret);
 	}
+
+	//get iterator
+	inline Object<PyObject> Object<>::getiter() const
+	{ return Object<PyObject>(success(PyObject_GetIter(obj))); }
 
 	//More convenient for argument conversion
 	template<class T> struct Object<Object<T>>

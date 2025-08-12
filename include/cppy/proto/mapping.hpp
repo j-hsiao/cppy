@@ -3,6 +3,8 @@
 #include <cppy/convert/pyobject.hpp>
 #include <cppy/mixin/sized.hpp>
 
+#include <cstddef>
+#include <utility>
 
 namespace cppy  {
 	template<class Base> struct PyMapping;

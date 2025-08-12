@@ -361,7 +361,19 @@ PyObject* test_object(PyObject *m, PyObject *args_) {
 		     << "isinstance" << std::endl;
 		CHECK(args.is_instance(&PyTuple_Type))
 		CHECK(args.is_instance(args.type()))
+
+		iout << "------------------------------" << std::endl
+		     << "iter" << std::endl;
+		int sz = args.size();
+		int tot = 0;
+		auto it = args.getiter();
+		CHECK(it.obj)
+		while (it.next().obj) {
+			++tot;
+		}
+		CHECK(tot == sz)
 	}
+
 	Py_RETURN_TRUE;
 }
 

@@ -3,13 +3,13 @@
 #ifndef CPPY_STRING_HPP
 #define CPPY_STRING_HPP
 
-#include <cppy/object.hpp>
+#include <cppy/convert/int.hpp>
 #include <cppy/errors.hpp>
 #include <cppy/mixin/checkthrow.hpp>
 #include <cppy/mixin/sized.hpp>
+#include <cppy/object.hpp>
 #include <cppy/proto/sequence.hpp>
 #include <cppy/util.hpp>
-#include <cppy/convert/int.hpp>
 
 #include <cstring>
 #include <string>
