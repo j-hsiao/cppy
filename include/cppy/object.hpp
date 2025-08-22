@@ -38,7 +38,7 @@ namespace cppy
 	template<> struct Object<PyObject&>:
 		Mapping<Object<>>,
 		Sized<Object<>, PyObject_Size>,
-		PyIterator<Object<PyObject&>>
+		PythonIterator<Object<PyObject&>>
 	{
 		PyObject *obj;
 
@@ -88,7 +88,7 @@ namespace cppy
 			PyObject* attr_noexc(Name &&name) const {
 				PyObject *ret;
 				int result = attr_noexc(std::forward<Name>(name), &ret);
-				if (result < 0) { throw PyError(); }
+				if (result < 0) { throw PythonError(); }
 				return ret;
 			}
 #		else
@@ -124,7 +124,7 @@ namespace cppy
 			template<class Name, class Value>
 			Object<>& setattr(Name &&name, Value &&value) {
 				if (setattr_(std::forward<Name>(name), std::forward<Value>(value)))
-				{ throw PyError(); }
+				{ throw PythonError(); }
 				return *this;
 			}
 
@@ -144,20 +144,20 @@ namespace cppy
 		public:
 			template<class Name>
 			Object<>& delattr(Name &&name) {
-				if (delattr_(std::forward<Name>(name))) { throw PyError(); }
+				if (delattr_(std::forward<Name>(name))) { throw PythonError(); }
 				return *this;
 			}
 
 		//issubclass
 		bool is_subclass(PyObject *cls) const {
 			int ret = PyObject_IsSubclass(obj, cls);
-			if (ret == -1) { throw PyError(); }
+			if (ret == -1) { throw PythonError(); }
 			return ret;
 		}
 		//isinstance
 		bool is_instance(PyObject *cls) const {
 			int ret = PyObject_IsInstance(obj, cls);
-			if (ret == -1) { throw PyError(); }
+			if (ret == -1) { throw PythonError(); }
 			return ret;
 		}
 		bool is_instance(PyTypeObject* cls) const
@@ -166,7 +166,7 @@ namespace cppy
 		//type(obj)
 		PyTypeObject* type() const {
 			PyTypeObject *ret = Py_TYPE(obj);
-			if (!ret) { throw PyError(); }
+			if (!ret) { throw PythonError(); }
 			return ret;
 		}
 
@@ -179,7 +179,7 @@ namespace cppy
 		Object<>& setitem(Key &&key, Val &&val) {
 			PyObjectConverter<Object> cvt;
 			if (PyObject_SetItem(obj, cvt(key), cvt(val)) == -1)
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 		//__delitem__
@@ -190,7 +190,7 @@ namespace cppy
 			{ return PyObject_DelItemString(obj, key); }
 		public:
 			template<class Key> Object<>& delitem(Key &&key) {
-				if (delitem_(std::forward<Key>(key))) { throw PyError(); }
+				if (delitem_(std::forward<Key>(key))) { throw PythonError(); }
 				return *this;
 			}
 
@@ -201,7 +201,7 @@ namespace cppy
 
 		explicit operator bool() const {
 			int result = PyObject_IsTrue(obj);
-			if (result < 0) { throw PyError(); }
+			if (result < 0) { throw PythonError(); }
 			return result == 1;
 		}
 		bool is_none() const { return obj == Py_None; }
@@ -263,7 +263,7 @@ namespace cppy
 	template<class Name>
 	Object<PyObject> Object<>::attr(Name &&name) const {
 		if (PyObject *ret = attr_(std::forward<Name>(name))) { return Object<PyObject>(ret); }
-		throw PyError();
+		throw PythonError();
 	}
 	template<class Name, class Default>
 	Object<PyObject> Object<>::attr(Name &&name, Default &&value) const {
@@ -281,7 +281,7 @@ namespace cppy
 	inline Object<PyObject> Object<>::getitem(Key &&key) const
 	{
 		PyObject *ret = PyObject_GetItem(obj, PyObjectConverter<Object>{}(key));
-		if (!ret) { throw PyError(); }
+		if (!ret) { throw PythonError(); }
 		return Object<PyObject>(ret);
 	}
 

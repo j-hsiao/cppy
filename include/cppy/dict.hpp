@@ -19,7 +19,7 @@ namespace cppy
 	template<> struct Object<Dict_&>:
 		CheckThrow<Object<Dict_&>>,
 		Mapping<Object<Dict_&>>,
-		PyMapping<Object<Dict_&>>,
+		PythonMapping<Object<Dict_&>>,
 		Sized<Object<Dict_&>, PyDict_Size>,
 		Borrowed
 	{
@@ -39,7 +39,7 @@ namespace cppy
 			PyObjectConverter<Object> cvt;
 			if (int val = PyDict_Contains(obj, cvt(std::forward<Key>(key)))) {
 				if (val == 1) { return true; }
-				else { throw PyError(); }
+				else { throw PythonError(); }
 			}
 			else { return false; }
 		}
@@ -47,7 +47,7 @@ namespace cppy
 		bool contains(const char* key) const {
 			if (int val = PyDict_ContainsString(obj, key)) {
 				if (val == 1) { return true; }
-				else { throw PyError(); }
+				else { throw PythonError(); }
 			}
 			else { return false; }
 		}
@@ -60,14 +60,14 @@ namespace cppy
 		Object<Dict_&>& setitem(Key &&key, Value &&value) {
 			PyObjectConverter<Object> cvt;
 			if (PyDict_SetItem(obj, cvt(std::forward<Key>(key)), cvt(std::forward<Value>(value))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 		template<class Value>
 		Object<Dict_&>& setitem(const char *key, Value &&value) {
 			PyObjectConverter<Object> cvt;
 			if (PyDict_SetItemString(obj, key, cvt(std::forward<Value>(value))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -87,10 +87,10 @@ namespace cppy
 				auto tmpkey = cvt(std::forward<Key>(key));
 				PyObject *ret = PyDict_GetItemWithError(obj, tmpkey);
 				if (ret) { return Object<>(ret); }
-				else if (PyErr_Occurred()) { throw PyError(); }
+				else if (PyErr_Occurred()) { throw PythonError(); }
 				else {
 					auto tmpval = cvt(std::forward<Value>(value));
-					if (PyDict_SetItem(obj, tmpkey, tmpval)) { throw PyError(); }
+					if (PyDict_SetItem(obj, tmpkey, tmpval)) { throw PythonError(); }
 					return Object<>(static_cast<PyObject*>(tmpval));
 				}
 #			endif
@@ -102,11 +102,11 @@ namespace cppy
 		template<class Key>
 		Object<Dict_&>& delitem(Key &&key) {
 			if (PyDict_DelItem(obj, PyObjectConverter<Object>{}(std::forward<Key>(key))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 		Object<Dict_&>& delitem(const char *key) {
-			if (PyDict_DelItemString(obj, key)) { throw PyError(); }
+			if (PyDict_DelItemString(obj, key)) { throw PythonError(); }
 			return *this;
 		}
 
@@ -125,7 +125,7 @@ namespace cppy
 			PyObject *ret = PyDict_GetItemWithError(
 				obj, PyObjectConverter<Object>{}(std::forward<Key>(key)));
 			if (ret) { return Object<>(ret); }
-			else if (PyErr_Occurred()) { throw PyError(); }
+			else if (PyErr_Occurred()) { throw PythonError(); }
 			else { throw KeyError(); }
 		}
 
@@ -134,7 +134,7 @@ namespace cppy
 			PyObject *ret = PyDict_GetItemWithError(
 				obj, PyObjectConverter<Object>{}(std::forward<Key>(key)));
 			if (ret) { return Object<>(ret); }
-			else if (PyErr_Occurred()) { throw PyError(); }
+			else if (PyErr_Occurred()) { throw PythonError(); }
 			else { return Object<>(nullptr); }
 		}
 
@@ -148,14 +148,14 @@ namespace cppy
 			};
 
 			// python default value, ok to return borrowed reference.
-			struct PyDefaultGetItem {
+			struct PyObjectDefaultGetItem {
 				typedef Object<> type;
 				type operator()(type obj) const { return obj; }
 			};
 
 			// rvalue owned reference, may be decref after call so must
 			// return owned reference.
-			struct PyRvalueDefaultGetItem {
+			struct PyObjectRvalueDefaultGetItem {
 				typedef Object<PyObject> type;
 				template<class T>
 				type operator()(Owned<T> &&o) { return o.ret(); }
@@ -167,8 +167,8 @@ namespace cppy
 				typename std::conditional<
 					decltype(is<Owned>(std::declval<Default&&>()))::value
 						&& std::is_rvalue_reference<Default&&>::value,
-					PyRvalueDefaultGetItem,
-					PyDefaultGetItem
+					PyObjectRvalueDefaultGetItem,
+					PyObjectDefaultGetItem
 				>::type,
 				CppDefaultGetItem
 			>::type;
@@ -178,7 +178,7 @@ namespace cppy
 			PyObject *ret = PyDict_GetItemWithError(
 				obj, PyObjectConverter<Object>{}(std::forward<Key>(key)));
 			if (ret) { return Object<>(ret); }
-			else if (PyErr_Occurred()) { throw PyError(); }
+			else if (PyErr_Occurred()) { throw PythonError(); }
 			else { return Converter<Default>{}(std::forward<Default>(value)); }
 		}
 	};

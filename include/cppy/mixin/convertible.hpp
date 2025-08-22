@@ -21,7 +21,7 @@ namespace cppy
 		O to() const {
 			typedef Converter<O> conv;
 			O val = conv::toc(static_cast<const Derived*>(this)->obj);
-			if (val == conv::badc() && PyErr_Occurred() != NULL) { throw PyError(); }
+			if (val == conv::badc() && PyErr_Occurred() != NULL) { throw PythonError(); }
 			return val;
 		}
 		template<class O> explicit operator O() const { return to<O>(); }

@@ -35,12 +35,12 @@ namespace cppy
 	template<> struct Object<const char*&>:
 		CheckThrow<Object<const char*&>>,
 		Sized<Object<const char*&>, PyUnicode_GetLength>,
-		PySequence<Object<const char*&>>,
+		PythonSequence<Object<const char*&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
 		using Sized<Object<const char*&>, PyUnicode_GetLength>::size;
-		using PySequence<Object<const char*&>>::getitem;
+		using PythonSequence<Object<const char*&>>::getitem;
 
 		bool check() const { return PyUnicode_Check(obj); }
 		static constexpr const char* name() { return "str"; }
@@ -56,7 +56,7 @@ namespace cppy
 			UTF8 ret;
 			ret.data = PyUnicode_AsUTF8AndSize(obj, &ret.size);
 			if (ret.data) { return ret; }
-			throw PyError();
+			throw PythonError();
 		};
 
 		template<class Start, class Stop>
@@ -65,7 +65,7 @@ namespace cppy
 		const char* c_str() const {
 			const char *ret = PyUnicode_AsUTF8(obj);
 			if (ret) { return ret; }
-			throw PyError();
+			throw PythonError();
 		}
 		operator const char*() const { return c_str(); }
 
@@ -140,7 +140,7 @@ namespace cppy
 				cvt(std::forward<Start>(start)),
 				cvt(std::forward<Stop>(stop)));
 			if (ret) { return Object<const char*>(ret); }
-			throw PyError();
+			throw PythonError();
 #		else
 			return sequence().slice(std::forward<Start>(start), std::forward<Stop>(stop));
 #		endif

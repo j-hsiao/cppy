@@ -13,7 +13,7 @@ namespace cppy {
 	struct Sized {
 		Py_ssize_t size() const {
 			Py_ssize_t ret = checked(static_cast<const Derived&>(*this).obj);
-			if (ret == invalid) { throw PyError(); }
+			if (ret == invalid) { throw PythonError(); }
 			return ret;
 		}
 	};

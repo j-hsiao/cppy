@@ -455,6 +455,7 @@ PyMODINIT_FUNC PyInit_testmodule()
 		{"test_dict", test_dict, METH_VARARGS, "Test dict."},
 		{"test_str", test_str, METH_VARARGS, "Test str."},
 		{}
+		// NOTE: PyDoc_Str for docstrings
 	};
 
 	static struct PyModuleDef mdef = {

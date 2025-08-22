@@ -15,7 +15,7 @@ namespace cppy {
 		CheckThrow<Object<List_&>>,
 		Mapping<Object<List_&>>,
 		Sized<Object<List_&>, PyList_Size>,
-		PySequence<Object<List_&>>,
+		PythonSequence<Object<List_&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
@@ -43,7 +43,7 @@ namespace cppy {
 			IndexConverter<Object> intcvt;
 			StealConverter<Object> stealcvt;
 			if (PyList_SetItem(obj, intcvt(std::forward<Idx>(idx)), stealcvt(std::forward<Value>(value))) == -1)
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -53,7 +53,7 @@ namespace cppy {
 			IndexConverter<Object> intcvt;
 			PyObjectConverter<Object> objcvt;
 			if (PyList_Insert(obj, intcvt(std::forward<Idx>(idx)), objcvt(std::forward<Value>(value))) == -1)
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -62,19 +62,19 @@ namespace cppy {
 		Object<List_&>& append(Value &&value) {
 			PyObjectConverter<Object> cvt;
 			if (PyList_Append(obj, cvt(std::forward<Value>(value))) == -1)
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
 		Tuple tuple() const { return Tuple(success(PyList_AsTuple(obj))); }
 
 		Object<List_&>& sort() {
-			if (PyList_Sort(obj) == -1) { throw PyError{}; }
+			if (PyList_Sort(obj) == -1) { throw PythonError{}; }
 			return *this;
 		}
 
 		Object<List_&>& reverse() {
-			if (PyList_Reverse(obj) == -1) { throw PyError{}; }
+			if (PyList_Reverse(obj) == -1) { throw PythonError{}; }
 			return *this;
 		}
 
@@ -83,7 +83,7 @@ namespace cppy {
 		Object<List_&>& extend(const Object<> &seq) { return extend(seq.obj); }
 
 		Object<List_&>& set_slice(Py_ssize_t low, Py_ssize_t high, PyObject *itemseq) {
-			if (PyList_SetSlice(obj, low, high, itemseq) == -1) { throw PyError{}; }
+			if (PyList_SetSlice(obj, low, high, itemseq) == -1) { throw PythonError{}; }
 			return *this;
 		}
 		Object<List_&>& set_slice(Py_ssize_t low, Py_ssize_t high, const Object<> &itemseq)
@@ -151,13 +151,13 @@ namespace cppy {
 	{ return Object<List_>(success(PyList_GetSlice(obj, start, stop))); }
 
 	template<class T, template<class>class Object>
-	Object<List_> PySequence<Object<T&>>::list() const
+	Object<List_> PythonSequence<Object<T&>>::list() const
 	{ return success(PySequence_List(static_cast<const Object<T&>*>(this)->obj)); }
 
 	inline Object<List_> Object<>::dir() const {
 		PyObject *ret = PyObject_Dir(obj);
 		if (ret) { return Object<List_>(ret); }
-		else if (PyErr_Occurred()) { throw PyError(); }
+		else if (PyErr_Occurred()) { throw PythonError(); }
 		else { return Object<List_>{}; }
 	}
 

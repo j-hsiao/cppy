@@ -11,21 +11,21 @@
 
 
 namespace cppy {
-	template<class Base> struct PySequence;
+	template<class Base> struct PythonSequence;
 
 	struct List_;
 	struct Tuple_;
 
 	template<class T, template<class>class Object>
-	struct PySequence<Object<T&>>:
-		CheckThrow<PySequence<Object<T&>>>,
+	struct PythonSequence<Object<T&>>:
+		CheckThrow<PythonSequence<Object<T&>>>,
 		Sized<Object<T&>, PySequence_Size>
 	{
 		using Base = Object<T&>;
 
-		PySequence<Base>&& sequence() && { return std::move(*this); }
-		PySequence<Base>& sequence() & { return *this; }
-		const PySequence<Base>& sequence() const& { return *this; }
+		PythonSequence<Base>&& sequence() && { return std::move(*this); }
+		PythonSequence<Base>& sequence() & { return *this; }
+		const PythonSequence<Base>& sequence() const& { return *this; }
 
 		bool check() const
 		{ return PySequence_Check(static_cast<const Base*>(this)->obj); }
@@ -95,7 +95,7 @@ namespace cppy {
 				static_cast<Base*>(this)->obj,
 				IntConverter<Object>{}(std::forward<Idx>(idx)),
 				PyObjectConverter<Object>{}(std::forward<Actual>(actual))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 		template<class Idx>
@@ -103,7 +103,7 @@ namespace cppy {
 			if (PySequence_SetItem(
 				static_cast<Base*>(this)->obj,
 				IntConverter<Object>{}(std::forward<Idx>(idx))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -128,7 +128,7 @@ namespace cppy {
 				icvt(std::forward<Start>(start)),
 				icvt(std::forward<Stop>(stop)),
 				PyObjectConverter<Object>{}(std::forward<Seq>(seq))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -139,7 +139,7 @@ namespace cppy {
 				static_cast<Base*>(this)->obj,
 				icvt(std::forward<Start>(start)),
 				icvt(std::forward<Stop>(stop))))
-			{ throw PyError(); }
+			{ throw PythonError(); }
 			return *this;
 		}
 
@@ -149,7 +149,7 @@ namespace cppy {
 			Py_ssize_t result = PySequence_Count(
 				static_cast<const Base*>(this)->obj,
 				PyObjectConverter<Object>{}(std::forward<Actual>(actual)));
-			if (result < 0) { throw PyError(); }
+			if (result < 0) { throw PythonError(); }
 			return result;
 		}
 
@@ -158,7 +158,7 @@ namespace cppy {
 			int result = PySequence_Contains(
 				static_cast<const Base*>(this)->obj,
 				PyObjectConverter<Object>{}(std::forward<Actual>(actual)));
-			if (result < 0) { throw PyError(); }
+			if (result < 0) { throw PythonError(); }
 			return result;
 		}
 
@@ -167,7 +167,7 @@ namespace cppy {
 			Py_ssize_t result = PySequence_Index(
 				static_cast<const Base*>(this)->obj,
 				PyObjectConverter<Object>{}(std::forward<Actual>(actual)));
-			if (result < 0) { throw PyError(); }
+			if (result < 0) { throw PythonError(); }
 			return result;
 		}
 

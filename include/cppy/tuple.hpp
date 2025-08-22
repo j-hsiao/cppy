@@ -19,7 +19,7 @@ namespace cppy
 		CheckThrow<Object<Tuple_&>>,
 		Mapping<Object<Tuple_&>>,
 		Sized<Object<Tuple_&>, PyTuple_Size>,
-		PySequence<Object<Tuple_&>>,
+		PythonSequence<Object<Tuple_&>>,
 		Borrowed
 	{
 		using Borrowed::Borrowed;
@@ -46,7 +46,7 @@ namespace cppy
 			IntConverter<Object> intcvt;
 			StealConverter<Object> stealcvt;
 			if (PyTuple_SetItem(obj, intcvt(idx), stealcvt(value)) == -1)
-			{ throw PyError(); }
+			{ throw PythonError(); }
 		}
 
 		template<Py_ssize_t start=0, class First, class...Items>
@@ -91,7 +91,7 @@ namespace cppy
 	{ return Object<Tuple_>(success(PyTuple_GetSlice(obj, start, stop))); }
 
 	template<class T, template<class>class Object>
-	Object<Tuple_> PySequence<Object<T&>>::tuple() const
+	Object<Tuple_> PythonSequence<Object<T&>>::tuple() const
 	{ return success(PySequence_Tuple(static_cast<const Object<T&>*>(this)->obj)); }
 
 	typedef Object<Tuple_> Tuple;

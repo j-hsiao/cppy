@@ -29,23 +29,23 @@ namespace cppy {
 
 		Iterator& operator++() {
 			obj = Object<PyObject>(PyIter_Next(pyit));
-			if (!obj.obj && PyErr_Occurred()) { throw PyError(); }
+			if (!obj.obj && PyErr_Occurred()) { throw PythonError(); }
 			return *this;
 		}
 	};
 
 
-	template<class Base> struct PyIterator;
-	template<class Base> struct PyAIterator;
+	template<class Base> struct PythonIterator;
+	template<class Base> struct PythonAIterator;
 
-	template<class T, template<class>class Object> struct PyIterator<Object<T&>>:
-		CheckThrow<PyIterator<Object<T&>>>
+	template<class T, template<class>class Object> struct PythonIterator<Object<T&>>:
+		CheckThrow<PythonIterator<Object<T&>>>
 	{
 		using Base = Object<T&>;
 
-		PyIterator<Base>&& iter() && { return std::move(*this); }
-		PyIterator<Base>& iter() & { return *this; }
-		const PyIterator<Base>& iter() const& { return *this; }
+		PythonIterator<Base>&& iter() && { return std::move(*this); }
+		PythonIterator<Base>& iter() & { return *this; }
+		const PythonIterator<Base>& iter() const& { return *this; }
 
 		bool check() const
 		{ return PyIter_Check(static_cast<const Base*>(this)->obj); }
@@ -53,22 +53,22 @@ namespace cppy {
 		Object<PyObject> next() {
 			if (PyObject *ret = PyIter_Next(static_cast<Base*>(this)->obj))
 			{ return Object<PyObject>(ret); }
-			else if (PyErr_Occurred()) { throw PyError(); }
+			else if (PyErr_Occurred()) { throw PythonError(); }
 			else { return Object<PyObject>(nullptr); }
 		}
 	};
 
-	template<class T, template<class>class Object> struct PyAIterator<Object<T&>>:
-		CheckThrow<PyAIterator<Object<T&>>>
+	template<class T, template<class>class Object> struct PythonAIterator<Object<T&>>:
+		CheckThrow<PythonAIterator<Object<T&>>>
 	{
 		using Base = Object<T&>;
 
-		PyAIterator<Base>&& aiter() && { return std::move(*this); }
-		PyAIterator<Base>& aiter() & { return *this; }
-		const PyAIterator<Base>& aiter() const& { return *this; }
+		PythonAIterator<Base>&& aiter() && { return std::move(*this); }
+		PythonAIterator<Base>& aiter() & { return *this; }
+		const PythonAIterator<Base>& aiter() const& { return *this; }
 
 		bool check() const
-		{ return PyAIter_Check(static_cast<const Base*>(this)->obj); }
+		{ return PythonAIter_Check(static_cast<const Base*>(this)->obj); }
 	};
 }
 #endif//CPPY_PROTO_ITERATOR_HPP

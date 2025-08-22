@@ -19,7 +19,7 @@ namespace cppy
 	};
 
 	//Innate python error occurred. After catching, return NULL.
-	struct PyError: Error { PyError(): Error("") {} };
+	struct PythonError: Error { PythonError(): Error("") {} };
 
 	//Some error occurred. Need to call PyErr_*
 	struct CPPError: Error {
@@ -42,7 +42,7 @@ namespace cppy
 
 	static inline PyObject* success(PyObject *obj) {
 		if (obj) { return obj; }
-		throw PyError();
+		throw PythonError();
 	}
 
 	void throwifnot(bool success, const char *msg="")
