@@ -48,12 +48,25 @@ namespace cppy
 		//No references to temporaries.
 		Object(Object<PyObject> &&o) = delete;
 
+		//------------------------------
+		//reassign to other object
+		//------------------------------
 		Object& operator=(const Object &o) {
 			obj = o.obj;
 			return *this;
 		}
 		Object& operator=(Object &&o) = delete;
 
+		//------------------------------
+		//refs
+		//------------------------------
+		Py_ssize_t refs() const { return Py_REFCNT(obj); }
+		void incref() const { Py_INCREF(obj); }
+		void incref() const { Py_DECREF(obj); }
+
+		//------------------------------
+		//get generic object interface
+		//------------------------------
 		const Object& object() const& { return *this; }
 		Object& object() & { return *this; }
 		Object&& object() && { return static_cast<Object&&>(*this); }
@@ -63,6 +76,7 @@ namespace cppy
 			Py_INCREF(obj);
 			return obj;
 		}
+
 		bool check() const { return true; }
 		static constexpr const char* name() { return "object"; }
 

@@ -19,11 +19,20 @@ namespace cppy
 	};
 
 	//Innate python error occurred. After catching, return NULL.
-	struct PythonError: Error { PythonError(): Error("") {} };
+	struct PythonError: Error {
+		PythonError(): Error("") {}
+
+		bool is(PyObject *exc) const { return PyErr_ExceptionMatches(exc); }
+	};
 
 	//Some error occurred. Need to call PyErr_*
 	struct CPPError: Error {
-		CPPError(PyObject *tp, const char *msg): Error(msg) { PyErr_SetString(tp, msg); }
+
+		PyObject *exctp;
+
+		CPPError(PyObject *tp, const char *msg): Error(msg), exctp(tp) { PyErr_SetString(tp, msg); }
+
+		bool is(PyObject *given) const { return PyErr_GivenExceptionMatches(given, exctp); }
 	};
 
 #define MAKE_CPPY_PYTHON_ERROR(name) \
