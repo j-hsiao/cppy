@@ -8,6 +8,8 @@
 #include <cppy/mixin/sized.hpp>
 #include <cppy/proto/sequence.hpp>
 #include <cppy/convert/int.hpp>
+#include <cppy/proto/call.hpp>
+
 
 #include <utility>
 
@@ -96,6 +98,15 @@ namespace cppy
 
 	typedef Object<Tuple_> Tuple;
 	typedef Object<Tuple_&> TupleRef;
+
+	template<class T, template<class> class Object>
+	template<class...Args>
+	Object<PyObject> PythonCallable<Object<T>>::operator()(Args&&...args) const {
+		return PyObject_CallObject(
+			static_cast<const Base*>(this)->obj,
+			Tuple(std::forward<Args>(args)...).obj
+		);
+	}
 
 
 	//// ------------------------------

@@ -20,6 +20,7 @@
 #include <cppy/mixin/sized.hpp>
 #include <cppy/convert/pyobject.hpp>
 #include <cppy/proto/iterator.hpp>
+#include <cppy/proto/call.hpp>
 
 #include <cstddef>
 #include <limits>
@@ -38,7 +39,8 @@ namespace cppy
 	template<> struct Object<PyObject&>:
 		Mapping<Object<>>,
 		Sized<Object<>, PyObject_Size>,
-		PythonIterator<Object<PyObject&>>
+		PythonIterator<Object<PyObject&>>,
+		PythonCallable<Object<PyObject&>>
 	{
 		PyObject *obj;
 
@@ -61,8 +63,10 @@ namespace cppy
 		//refs
 		//------------------------------
 		Py_ssize_t refs() const { return Py_REFCNT(obj); }
-		void incref() const { Py_INCREF(obj); }
-		void incref() const { Py_DECREF(obj); }
+		const Object& incref() const { Py_INCREF(obj); return *this; }
+		const Object& decref() const { Py_DECREF(obj); return *this; }
+		Object& incref() { Py_INCREF(obj); return *this; }
+		Object& decref() { Py_DECREF(obj); return *this; }
 
 		//------------------------------
 		//get generic object interface

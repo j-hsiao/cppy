@@ -54,6 +54,9 @@ def check(func, *args):
         errored = True
     return errored
 
+def tfunc(*args):
+    return args
+
 if (
     check(testmodule.test_object, [slice(10,30)], (3.14, 101), "hello", None, MyThing())
     or check(testmodule.test_str, 'abc123def456')
@@ -61,5 +64,6 @@ if (
     or check(testmodule.test_convert, 1,2,3,'a', 'b', 'c')
     or check(testmodule.test_list, 'abc', 123)
     or check(testmodule.test_dict, dict(a=1, b=2))
+    or check(testmodule.test_call, tfunc)
 ):
     sys.exit(1)

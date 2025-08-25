@@ -444,6 +444,18 @@ PyObject* test_dict(PyObject *m, PyObject *args_) {
 	Py_RETURN_TRUE;
 }
 
+PyObject* test_call(PyObject *m, PyObject *args_) {
+	cppy::TupleRef args(args_);
+	{
+		cppy::Obj result((*args[0])(1, 2, 3));
+		CHECK(result.size() == 3)
+		CHECK(result[0]->as<int&>() == 1)
+		CHECK(result[1]->as<int&>() == 2)
+		CHECK(result[2]->as<int&>() == 3)
+	}
+	Py_RETURN_TRUE;
+}
+
 
 PyMODINIT_FUNC PyInit_testmodule()
 {
@@ -454,6 +466,7 @@ PyMODINIT_FUNC PyInit_testmodule()
 		{"test_list", test_list, METH_VARARGS, "Test list."},
 		{"test_dict", test_dict, METH_VARARGS, "Test dict."},
 		{"test_str", test_str, METH_VARARGS, "Test str."},
+		{"test_call", test_call, METH_VARARGS, "Test call."},
 		{}
 		// NOTE: PyDoc_Str for docstrings
 	};
