@@ -441,18 +441,54 @@ PyObject* test_dict(PyObject *m, PyObject *args_) {
 		Py_RETURN_FALSE;
 	}
 	catch (cppy::Error &e) { e.clear(); }
+	{
+		cppy::Dict dct("a", 1, "b", 2, "c", 3);
+		CHECK(dct.size() == 3)
+		CHECK(dct["a"]->as<int&>() == 1)
+		CHECK(dct["b"]->as<int&>() == 2)
+		CHECK(dct["c"]->as<int&>() == 3)
+	}
 	Py_RETURN_TRUE;
 }
 
 PyObject* test_call(PyObject *m, PyObject *args_) {
 	cppy::TupleRef args(args_);
 	{
+		iout << "Natural calling" << std::endl;
 		cppy::Obj result((*args[0])(1, 2, 3));
 		CHECK(result.size() == 3)
 		CHECK(result[0]->as<int&>() == 1)
 		CHECK(result[1]->as<int&>() == 2)
 		CHECK(result[2]->as<int&>() == 3)
 	}
+	{
+		iout << "Args tuple" << std::endl;
+		cppy::Obj result(args[0]->call(cppy::Tuple(4, 5, 6)));
+		CHECK(result.size() == 3)
+		CHECK(result[0]->as<int&>() == 4)
+		CHECK(result[1]->as<int&>() == 5)
+		CHECK(result[2]->as<int&>() == 6)
+	}
+
+	{
+		iout << "Kwargs only" << std::endl;
+		cppy::Obj result(args[1]->call(cppy::Dict("a", 1, "b", 2)));
+		CHECK(result.size() == 2)
+		CHECK(result["a"]->as<int&>() == 1)
+		CHECK(result["b"]->as<int&>() == 2)
+	}
+
+	{
+		iout << "args and kwargs" << std::endl;
+		cppy::Obj result(args[2]->call(cppy::Tuple(3.14, "hello"), cppy::Dict("a", 1, "b", 2)));
+		CHECK(result.size() == 2)
+		CHECK(result[0][0]->as<double&>() == 3.14)
+		CHECK(result[0][1]->as<const char*&>() == "hello")
+		CHECK(result[1]["a"]->as<int&>() == 1)
+		CHECK(result[1]["b"]->as<int&>() == 2)
+	}
+
+
 	Py_RETURN_TRUE;
 }
 

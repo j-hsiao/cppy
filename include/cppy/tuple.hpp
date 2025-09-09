@@ -9,7 +9,8 @@
 #include <cppy/proto/sequence.hpp>
 #include <cppy/convert/int.hpp>
 #include <cppy/proto/call.hpp>
-
+#include <cppy/dict.hpp>
+#include <iostream>
 
 #include <utility>
 
@@ -79,6 +80,8 @@ namespace cppy
 			Owned<Tuple_>(success(PyTuple_New(static_cast<Py_ssize_t>(sizeof...(T)))))
 		{ setnewitems(std::forward<T>(items)...); }
 
+		Object(): Owned<Tuple_>(success(PyTuple_New(static_cast<Py_ssize_t>(0)))) {}
+
 		private:
 			template<Py_ssize_t pos=0, class First, class...Items>
 			void setnewitems(First &&first, Items&&...items) {
@@ -101,12 +104,28 @@ namespace cppy
 
 	template<class T, template<class> class Object>
 	template<class...Args>
-	Object<PyObject> PythonCallable<Object<T>>::operator()(Args&&...args) const {
-		return PyObject_CallObject(
-			static_cast<const Base*>(this)->obj,
-			Tuple(std::forward<Args>(args)...).obj
-		);
+	Object<PyObject> PythonCallable<Object<T>>::operator()(Args&&...args) const
+	{ return call(Tuple(std::forward<Args>(args)...)); }
+
+	template<class T, template<class> class Object>
+	Object<PyObject> PythonCallable<Object<T>>::call(const Object<Tuple_&> &args) const
+	{ return success(PyObject_CallObject(static_cast<const Object<T&>*>(this)->obj, args.obj)); }
+
+	template<class T, template<class> class Object>
+	Object<PyObject> PythonCallable<Object<T>>::call(const Object<Dict_&> &kwargs) const {
+		static Tuple tup;
+		return success(
+			PyObject_Call(static_cast<const Object<T&>*>(this)->obj, tup.obj, kwargs.obj));
 	}
+
+	template<class T, template<class> class Object>
+	Object<PyObject> PythonCallable<Object<T>>::call(
+		const Object<Tuple_&> &args, const Object<Dict_&> &kwargs) const
+	{
+		return success(
+			PyObject_Call(static_cast<const Object<T&>*>(this)->obj, args.obj, kwargs.obj));
+	}
+
 
 
 	//// ------------------------------

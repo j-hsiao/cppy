@@ -70,6 +70,13 @@ namespace cppy
 			{ throw PythonError(); }
 			return *this;
 		}
+		//set multiple items, grouped by 2
+		template<class A, class B, class...T>
+		Object<Dict_&>& setitem(A &&a, B &&b, T&&...t) {
+			static_assert(sizeof...(T)%2 == 0, "Expect pairs of key,value");
+			setitem(std::forward<A>(a), std::forward<B>(b));
+			return setitem(std::forward<T>(t)...);
+		}
 
 		//------------------------------
 		//setdefault
@@ -181,10 +188,15 @@ namespace cppy
 			else if (PyErr_Occurred()) { throw PythonError(); }
 			else { return Converter<Default>{}(std::forward<Default>(value)); }
 		}
+
 	};
 
 	template<> struct Object<Dict_>: Owned<Dict_> {
 		using Owned<Dict_>::Owned;
+		template<class...T>
+		Object(T&&...items): Owned<Dict_>(success(PyDict_New()))
+		{ setitem(std::forward<T>(items)...); }
+
 	};
 
 	Object<Dict_> Object<Dict_&>::copy() const

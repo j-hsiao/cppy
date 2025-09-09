@@ -54,8 +54,14 @@ def check(func, *args):
         errored = True
     return errored
 
-def tfunc(*args):
+def argsonly(*args):
     return args
+
+def kwargsonly(**kwargs):
+    return kwargs
+
+def argskwargs(*args, **kwargs):
+    return args, kwargs
 
 if (
     check(testmodule.test_object, [slice(10,30)], (3.14, 101), "hello", None, MyThing())
@@ -64,6 +70,6 @@ if (
     or check(testmodule.test_convert, 1,2,3,'a', 'b', 'c')
     or check(testmodule.test_list, 'abc', 123)
     or check(testmodule.test_dict, dict(a=1, b=2))
-    or check(testmodule.test_call, tfunc)
+    or check(testmodule.test_call, argsonly, kwargsonly, argskwargs)
 ):
     sys.exit(1)

@@ -7,6 +7,9 @@ namespace cppy {
 
 	template<class Base> struct PythonCallable;
 
+	struct Tuple_;
+	struct Dict_;
+
 
 	template<class T, template<class>class Object>
 	struct PythonCallable<Object<T>>:
@@ -34,6 +37,13 @@ namespace cppy {
 
 		template<class...Args>
 		Object<PyObject> operator()(Args&&...args) const; // define in cppy/tuple.hpp
+
+		//call directly with the argtuple and/or kwargs dict
+		Object<PyObject> call(const Object<Tuple_&>&) const;
+		Object<PyObject> call(const Object<Tuple_&>&, const Object<Dict_&>&) const;
+		Object<PyObject> call(const Object<Dict_&>&) const;
+
+
 
 	};
 }
