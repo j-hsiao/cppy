@@ -178,5 +178,26 @@ namespace cppy
 		return callable(std::forward<Args>(converted)...);
 	}
 
+
+	template<std::size_t N>
+	struct Kwargs {
+		Object<const char*> names[N];
+
+
+	};
+
+
+	template<class Callable, class...Names>
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, const TupleRef &args, const DictRef &kwargs, Names&&...names)
+	{
+		if (args.size() == sizeof...(Names))
+		{ return callcpp(std::forward<Callable>(callable)); }
+		else if (args.size() > sizeof...(Names))
+		{ throw TypeError("Too many arguments"); }
+		else {
+		}
+	}
+
 }
 #endif//CPPY_TUPLE_HPP
