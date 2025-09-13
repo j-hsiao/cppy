@@ -257,11 +257,26 @@ namespace cppy
 			this->obj = o.ret();
 			return *this;
 		}
-		template<class OActual>
-		Owned& operator=(const Object<OActual&> &o) noexcept {
+		Owned& operator=(Owned &&o) noexcept {
 			Py_XDECREF(this->obj);
-			this->obj = o.obj;
-			Py_XINCREF(this->obj);
+			this->obj = o.ret();
+			return *this;
+		}
+
+		Owned& operator=(const Owned &o) noexcept
+		{ return operator=(o.obj); }
+		template<class OActual>
+		Owned& operator=(const Owned<OActual> &o) noexcept
+		{ return operator=(o.obj); }
+		template<class OActual>
+		Owned& operator=(const Object<OActual&> &o) noexcept
+		{ return operator=(o.obj); }
+
+		template<class OActual>
+		Owned& operator=(PyObject *obj) noexcept {
+			Py_XDECREF(this->obj);
+			this->obj = obj;
+			Py_XINCREF(obj);
 			return *this;
 		}
 
@@ -275,7 +290,10 @@ namespace cppy
 	};
 
 	//owned generic object
-	template<> struct Object<PyObject>: Owned<PyObject> { using Owned<PyObject>::Owned; };
+	template<> struct Object<PyObject>: Owned<PyObject> {
+		using Owned<PyObject>::Owned;
+		using Owned<PyObject>::operator=;
+	};
 
 	//getattr
 	template<class Name>

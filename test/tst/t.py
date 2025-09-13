@@ -71,7 +71,7 @@ if (
     or check(testmodule.test_list, 'abc', 123)
     or check(testmodule.test_dict, dict(a=1, b=2))
     or check(testmodule.test_call, argsonly, kwargsonly, argskwargs)
-    or check(testmodule.test_cppcall, (1, 2), (1,), ())
+    or check(testmodule.test_cppcall, (1, 2), (1,), (), (1,2,3))
 ):
     sys.exit(1)
 

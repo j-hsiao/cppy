@@ -504,8 +504,27 @@ PyObject* test_cppcall(PyObject *module, PyObject *args_) {
 	}
 	catch (cppy::Error &e) {
 		CHECK(("Error thrown", true))
-		e.clear();
+		PyErr_Print();
 	}
+
+	try {
+		iout << "Call with extra arguments." << std::endl;
+		cppy::callcpp([](int a, int b) { return a + b; }, args[3]->as<cppy::Tuple_&>());
+	}
+	catch (cppy::Error &e) {
+		CHECK(("Error thrown", true))
+		PyErr_Print();
+	}
+
+	cppy::Caller caller;
+
+	cppy::StealConverter<cppy::Object> cvt;
+	cppy::Obj obj1(cvt(nullptr));
+	cppy::Obj obj2(cvt(nullptr));
+
+	obj1 = obj2;
+
+
 
 	Py_RETURN_TRUE;
 }

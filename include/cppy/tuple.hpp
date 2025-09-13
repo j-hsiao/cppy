@@ -11,9 +11,10 @@
 #include <cppy/proto/call.hpp>
 #include <cppy/dict.hpp>
 #include <cppy/util.hpp>
-#include <iostream>
 
+#include <iostream>
 #include <utility>
+#include <vector>
 
 namespace cppy
 {
@@ -153,9 +154,7 @@ namespace cppy
 		Callable &&callable, const TupleRef &args, Args&&...converted)
 	{
 		if (args.size() == tupidx) {
-			// if callable has default arguments, then sizeof...(Args) can be less than
-			// the number of arguments that callable takes (Must be functor, functions don't store default
-			// arguments in their signatures.)
+			// args exhausted, use default arguments.
 			return callable(std::forward<Args>(converted)...);
 		}
 		else {
@@ -173,31 +172,68 @@ namespace cppy
 	typename function_signature<Callable>::return_type callcpp(
 		Callable &&callable, const TupleRef &args, Args&&...converted)
 	{
-		if (tupidx != args.size())
-		{ throw TypeError("Arguments do not match."); }
+		if (tupidx != args.size()) { throw TypeError("Too many arguments."); }
 		return callable(std::forward<Args>(converted)...);
 	}
 
+	//Store PyObject* to the argument names for use with the dict.
+	//Reduce need to recreate the strings every time.
+	struct Caller {
+		struct Arg {
+			Object<const char*> name;
+			Object<PyObject> value;
 
-	template<std::size_t N>
-	struct Kwargs {
-		Object<const char*> names[N];
+			Arg(const char *name): name(name), value(nullptr) {}
+			template<class Default>
+			Arg(const char *name, Default &&value):
+				name(name),
+				value(StealConverter<Object>{}(std::forward<Default>(value)))
+			{}
 
+			template<class T>
+			Arg& operator=(T &&t) {
+				value = StealConverter<Object>{}(t);
+			}
+		};
 
+		std::vector<Arg> args;
+
+		template<class...Args>
+		Caller(Args&&...iargs) {
+			args.reserve(sizeof...(Args)/2);
+			add(std::forward<Args>(iargs)...);
+		}
+
+		//template<
+		//	int tupidx=0, class Callable, class...Args,
+		//	typename std::enable_if<!decltype(is_callable(std::declval<Callable>(), std::declval<Args>()...))::value, bool>::type = true
+		//>
+		//typename function_signature<Callable>::return_type call (
+		//	Callable &&callable, const TupleRef &args, const DictRef &kwargs, Args&&...converted)
+		//{
+		//	if (tupidx == args.size()) {
+		//	}
+		//}
+
+		template<class Argname>
+		Caller& add(Argname &&argname) {
+			args.push_back(Arg{Object<const char*>(std::forward<Argname>(argname)), nullptr});
+			return *this;
+		}
+
+		template<class Argname, class Default>
+		Caller& add(Argname &&argname, Default &&value) {
+			std::cout << "Pushing argname with default value" << std::endl;
+			args.push_back(
+				Arg{
+					Object<const char*>(std::forward<Argname>(argname)),
+					StealConverter<Object>{}(std::forward<Default>(value))});
+			return *this;
+		}
+
+		Caller& add() { return *this; }
 	};
 
-
-	template<class Callable, class...Names>
-	typename function_signature<Callable>::return_type callcpp(
-		Callable &&callable, const TupleRef &args, const DictRef &kwargs, Names&&...names)
-	{
-		if (args.size() == sizeof...(Names))
-		{ return callcpp(std::forward<Callable>(callable)); }
-		else if (args.size() > sizeof...(Names))
-		{ throw TypeError("Too many arguments"); }
-		else {
-		}
-	}
 
 }
 #endif//CPPY_TUPLE_HPP

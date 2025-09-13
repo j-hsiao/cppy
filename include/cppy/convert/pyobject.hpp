@@ -5,6 +5,7 @@
 #include <cppy/errors.hpp>
 #include <cppy/util.hpp>
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 #include <iostream>
@@ -122,6 +123,10 @@ namespace cppy {
 			//Incref to ensure there is a ref that can be stolen.
 			Py_INCREF(p);
 			return p;
+		}
+
+		PyObject* operator()(std::nullptr_t) const {
+			return nullptr;
 		}
 
 		template<class T> PyObject* operator()(T &&t) const
