@@ -19,6 +19,7 @@ namespace cppy {
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<List_&>>::checkthrow;
 		using Sized<Object<List_&>, PyList_Size>::size;
 		using Mapping<Object<List_&>>::operator[];
 

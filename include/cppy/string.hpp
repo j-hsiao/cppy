@@ -39,6 +39,7 @@ namespace cppy
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<const char*&>>::checkthrow;
 		using Sized<Object<const char*&>, PyUnicode_GetLength>::size;
 		using PythonSequence<Object<const char*&>>::getitem;
 

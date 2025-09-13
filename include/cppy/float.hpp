@@ -27,6 +27,7 @@ namespace cppy
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<float&>>::checkthrow;
 
 		bool check() const { return PyFloat_Check(this->obj); }
 		static constexpr const char* name() { return "float"; }

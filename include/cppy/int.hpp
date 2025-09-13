@@ -60,6 +60,7 @@ namespace cppy
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<int&>>::checkthrow;
 
 		bool check() const { return PyLong_Check(this->obj); }
 		static constexpr const char* name() { return "int"; }

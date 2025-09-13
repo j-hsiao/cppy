@@ -492,6 +492,23 @@ PyObject* test_call(PyObject *m, PyObject *args_) {
 	Py_RETURN_TRUE;
 }
 
+PyObject* test_cppcall(PyObject *module, PyObject *args_) {
+	cppy::TupleRef args(args_);
+
+	CHECK(cppy::callcpp([](int a, int b) { return a + b; }, args[0]->as<cppy::Tuple_&>()) == 3)
+	CHECK(cppy::callcpp([](int a, int b=2) { return a + b; }, args[1]->as<cppy::Tuple_&>()) == 3);
+
+	try {
+		iout << "Call with inadequate arguments." << std::endl;
+		cppy::callcpp([](int a, int b) { return a + b; }, args[2]->as<cppy::Tuple_&>());
+	}
+	catch (cppy::Error &e) {
+		CHECK(("Error thrown", true))
+		e.clear();
+	}
+
+	Py_RETURN_TRUE;
+}
 
 PyMODINIT_FUNC PyInit_testmodule()
 {
@@ -503,6 +520,7 @@ PyMODINIT_FUNC PyInit_testmodule()
 		{"test_dict", test_dict, METH_VARARGS, "Test dict."},
 		{"test_str", test_str, METH_VARARGS, "Test str."},
 		{"test_call", test_call, METH_VARARGS, "Test call."},
+		{"test_cppcall", test_cppcall, METH_VARARGS, "Test calling cpp with py tuple."},
 		{}
 		// NOTE: PyDoc_Str for docstrings
 	};

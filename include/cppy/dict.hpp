@@ -24,6 +24,7 @@ namespace cppy
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<Dict_&>>::checkthrow;
 		using Sized<Object<Dict_&>, PyDict_Size>::size;
 		using Mapping<Object<Dict_&>>::operator[];
 

@@ -80,46 +80,46 @@ namespace cppy
 //	template<class T> struct Types<const T&>: Types<T> {};
 //	template<class T> struct Types<const T&&>: Types<T> {};
 
-//	//hold arguments
-//	template<class...Args> struct Arguments {
-//		static constexpr std::size_t count = sizeof...(Args);
+	//hold arguments
+	template<class...Args> struct Arguments {
+		static constexpr std::size_t count = sizeof...(Args);
 
-//		//Get a type by index
-//		template<std::size_t idx, class cls=Arguments<Args...>> struct get
-//		{
-//			template<class T, class...Remain>
-//			static Arguments<Remain...> rtp(Arguments<T, Remain...>);
+		//Get a type by index
+		template<std::size_t idx, class cls=Arguments<Args...>> struct get
+		{
+			template<class T, class...Remain>
+			static Arguments<Remain...> rtp(Arguments<T, Remain...>);
 
-//			typedef typename get<idx-1, decltype(rtp(cls{}))>::type type;
-//		};
-//		template<class args> struct get<0, args>
-//		{
-//			template<class T, class...Remain>
-//			static T rtp(Arguments<T, Remain...>);
-//			typedef decltype(rtp(args{})) type;
-//		};
-//	};
+			typedef typename get<idx-1, decltype(rtp(cls{}))>::type type;
+		};
+		template<class args> struct get<0, args>
+		{
+			template<class T, class...Remain>
+			static T rtp(Arguments<T, Remain...>);
+			typedef decltype(rtp(args{})) type;
+		};
+	};
 
-//	//function signature
-//	template<class T> struct function_signature;
-//	template<class T> struct function_signature<T&>: function_signature<T> {};
-//	template<class T> struct function_signature<T&&>: function_signature<T> {};
+	//function signature
+	template<class T> struct function_signature;
+	template<class T> struct function_signature<T&>: function_signature<T> {};
+	template<class T> struct function_signature<T&&>: function_signature<T> {};
 
-//	//function
-//	template<class ret, class...Args>
-//	struct function_signature<ret (Args...)>
-//	{
-//		typedef ret return_type;
-//		typedef Arguments<Args...> arguments_type;
-//	};
+	//function
+	template<class ret, class...Args>
+	struct function_signature<ret (Args...)>
+	{
+		typedef ret return_type;
+		typedef Arguments<Args...> arguments_type;
+	};
 
-//	//function pointer
-//	template<class ret, class...Args>
-//	struct function_signature<ret (*)(Args...)>: function_signature<ret (Args...)> {};
+	//function pointer
+	template<class ret, class...Args>
+	struct function_signature<ret (*)(Args...)>: function_signature<ret (Args...)> {};
 
-//	//------------------------------
-//	// member functions
-//	//------------------------------
+	//------------------------------
+	// member functions
+	//------------------------------
 #	define CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(trail) \
 	template<class Functor, class ret, class...Args> \
 	struct function_signature<ret (Functor::*)(Args...) trail> \
@@ -128,22 +128,29 @@ namespace cppy
 		typedef Arguments<Args...> arguments_type; \
 	}
 
-//	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(const);
-//	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(const&);
-//	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(&);
-//	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(&&);
-//	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR();
+	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(const);
+	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(const&);
+	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(&);
+	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR(&&);
+	CPPY_MAKE_FUNCTION_SIGNATURE_MEMBER_FUNCTION_PTR();
 
-//	//functor
-//	template<class Functor>
-//	struct function_signature: function_signature<decltype(&Functor::operator())> {};
+	//functor
+	template<class Functor>
+	struct function_signature: function_signature<decltype(&Functor::operator())> {};
 
-//	//NOTE: function pointers/function types, do NOT store default values
-//	//so this would only work with functors.
-//	template<class T, class...V>
-//	auto is_callable(T&&t, V&&...v)
-//		-> typename enabled<true, std::true_type, decltype(t(std::forward<V>(v)...))>::type;
-//	std::false_type is_callable(...);
+	//NOTE: Functions decay into function pointers.
+	//Function pointers do not carry any default argument information so this does NOT
+	//work for functions/function pointers.  Only operator() would work (structs, lambdas, etc)
+	//so this would only work with functors.
+	template<
+		class T, class...V,
+		typename std::conditional<
+			false,
+			decltype(std::declval<T>()(std::declval<V>()...)),
+			bool>::type=true
+	>
+	constexpr std::true_type is_callable(T&&t, V&&...v) { return {}; }
+	constexpr std::false_type is_callable(...) { return {}; }
 
 //	//Default constructible type
 //	template<class T>

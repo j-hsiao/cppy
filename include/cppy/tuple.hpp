@@ -10,6 +10,7 @@
 #include <cppy/convert/int.hpp>
 #include <cppy/proto/call.hpp>
 #include <cppy/dict.hpp>
+#include <cppy/util.hpp>
 #include <iostream>
 
 #include <utility>
@@ -26,6 +27,7 @@ namespace cppy
 		Borrowed
 	{
 		using Borrowed::Borrowed;
+		using CheckThrow<Object<Tuple_&>>::checkthrow;
 		using Mapping<Object<Tuple_&>>::operator[];
 		using Sized<Object<Tuple_&>, PyTuple_Size>::size;
 
@@ -126,64 +128,55 @@ namespace cppy
 			PyObject_Call(static_cast<const Object<T&>*>(this)->obj, args.obj, kwargs.obj));
 	}
 
+	// ------------------------------
+	// Call a C++ functor by converting arguments from a python tuple.
+	// ------------------------------
+	template<
+		int tupidx=0, class Callable, class...Args,
+		typename std::enable_if<!decltype(is_callable(std::declval<Callable>(), std::declval<Args>()...))::value, bool>::type = true
+	>
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, const TupleRef &args, Args&&...converted)
+	{
+		assert(sizeof...(converted) < args.size());
+		return callcpp<tupidx+1>(
+			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
+			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
+	}
 
+	template<
+		int tupidx=0, class Callable, class...Args,
+		typename std::enable_if<decltype(is_callable(std::declval<Callable>(), std::declval<Args>()...))::value, bool>::type = true,
+		typename std::enable_if<(sizeof...(Args) < function_signature<Callable>::arguments_type::count), bool>::type = true
+	>
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, const TupleRef &args, Args&&...converted)
+	{
+		if (args.size() == tupidx) {
+			// if callable has default arguments, then sizeof...(Args) can be less than
+			// the number of arguments that callable takes (Must be functor, functions don't store default
+			// arguments in their signatures.)
+			return callable(std::forward<Args>(converted)...);
+		}
+		else {
+			return callcpp<tupidx+1>(
+				std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
+				Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
+		}
+	}
 
-	//// ------------------------------
-	//// Call a C++ functor by converting arguments from a python tuple.
-	//// ------------------------------
-	////TODO: is_callable to call with default arguments.
-	//template<
-	//	int offset=0, class Callable, class...Args,
-	//	typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
-	//>
-	//typename function_signature<Callable>::return_type callcpp(
-	//	Callable &&callable, const Tuple<> &args, Args&&...converted)
-	//{
-	//	return callcpp(
-	//		std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
-	//		Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(args[sizeof...(Args)+offset]()).checkthrow()
-	//	);
-	//}
-
-	//template<
-	//	class Callable, class...Args,
-	//	typename enabled<(sizeof...(Args) < function_signature<Callable>::arguments_type::count)>::type = true
-	//>
-	//typename function_signature<Callable>::return_type callcpp(
-	//	Callable &&callable, PyObject *self, const Tuple<> &args)
-	//{
-	//	return callcpp<-1>(
-	//		std::forward<Callable>(callable), args,
-	//		Object<typename function_signature<Callable>::arguments_type::get<0>::type>(self).checkthrow()
-	//	);
-	//}
-
-	//template<
-	//	class Callable, class...Args,
-	//	typename enabled<sizeof...(Args) == function_signature<Callable>::arguments_type::count>::type = true
-	//>
-	//typename function_signature<Callable>::return_type callcpp(
-	//	Callable &&callable, const Tuple<> &args, Args&&...converted)
-	//{
-	//	return callable(std::forward<Args>(converted)...);
-	//}
-
-	//struct CPPCaller {
-	//	template<class T, class...Args>
-	//	auto operator()(T&&t, Args&&...args) const
-	//		-> decltype(callcpp(std::forward<T>(t), std::forward<Args>(args)...))
-	//	{
-	//		return callcpp(std::forward<T>(t), std::forward<Args>(args)...);
-	//	}
-	//};
-
-	//// ------------------------------
-	//// call python callable using c++ arguments.
-	//// ------------------------------
-	//template<class...Args>
-	//PyObject* callpy(PyObject *callable, Args&&...args)
-	//{ return success(PyObject_Call(callable, Tuple<true>(std::forward<Args>(args)...).obj, NULL)); }
-
+	template<
+		int tupidx=0, class Callable, class...Args,
+		typename std::enable_if<decltype(is_callable(std::declval<Callable>(), std::declval<Args>()...))::value, bool>::type = true,
+		typename std::enable_if<(sizeof...(Args) == function_signature<Callable>::arguments_type::count), bool>::type = true
+	>
+	typename function_signature<Callable>::return_type callcpp(
+		Callable &&callable, const TupleRef &args, Args&&...converted)
+	{
+		if (tupidx != args.size())
+		{ throw TypeError("Arguments do not match."); }
+		return callable(std::forward<Args>(converted)...);
+	}
 
 }
 #endif//CPPY_TUPLE_HPP
