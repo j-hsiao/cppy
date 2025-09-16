@@ -91,7 +91,7 @@ namespace cppy
 
 #define MAKE_CPPY_INT_TYPE(tp) \
 	template<> struct Object<tp&>: Object<int&> { using Object<int&>::Object; }; \
-	template<> struct Object<tp>: Object<int> { using Object<int>::Owned; }
+	template<> struct Object<tp>: Object<int> { using Object<int>::Object; }
 
 
 MAKE_CPPY_INT_TYPE(unsigned int);

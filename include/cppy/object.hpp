@@ -179,7 +179,13 @@ namespace cppy
 			return ret;
 		}
 		bool is_instance(PyTypeObject* cls) const
-		{ return Py_IS_TYPE(obj, cls); }
+		{
+#			if PY_MAJOR_VERSION > 3 || PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 9
+				return Py_IS_TYPE(obj, cls);
+#			else
+				return Py_TYPE(obj) == cls;
+#			endif
+		}
 
 		//type(obj)
 		PyTypeObject* type() const {
