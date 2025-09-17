@@ -142,7 +142,7 @@ namespace cppy
 		assert(sizeof...(converted) < args.size());
 		return callcpp<tupidx+1>(
 			std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
-			Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
+			Object<typename function_signature<Callable>::arguments_type::template get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
 	}
 
 	template<
@@ -160,7 +160,7 @@ namespace cppy
 		else {
 			return callcpp<tupidx+1>(
 				std::forward<Callable>(callable), args, std::forward<Args>(converted)...,
-				Object<typename function_signature<Callable>::arguments_type::get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
+				Object<typename function_signature<Callable>::arguments_type::template get<sizeof...(Args)>::type>(*args[tupidx]).checkthrow());
 		}
 	}
 
@@ -193,6 +193,7 @@ namespace cppy
 			template<class T>
 			Arg& operator=(T &&t) {
 				value = StealConverter<Object>{}(t);
+				return *this;
 			}
 		};
 

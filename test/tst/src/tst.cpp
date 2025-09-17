@@ -21,7 +21,7 @@ struct Indented {
 
 	Indented& operator<<(std::ostream& (*funct)(std::ostream&)) {
 		o << funct;
-		if (funct == std::endl<std::ostream::char_type, std::ostream::traits_type>)
+		if (funct == &std::endl<std::ostream::char_type, std::ostream::traits_type>)
 		{ start = true; }
 		return *this;
 	}

@@ -75,7 +75,7 @@ namespace cppy
 		template<class V=T, typename enable<signature::arguments_type::count == 1>::type=true>
 		static PyObject* call(PyObject *self, PyObject *args)
 		{
-			Object<typename signature::arguments_type::get<0>::type, false> arg(args);
+			Object<typename signature::arguments_type::template get<0>::type, false> arg(args);
 			if (args.check()) { return catchcall(buf.ref(), arg); }
 			else {
 				TypeError("Type mismatch.");
